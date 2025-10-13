@@ -2,15 +2,14 @@ import { ENHANCED_COLORS } from "@/app/utils/constant";
 import {
   isLargeScreen,
   isSmallScreen,
-  responsiveBorderRadius,
   responsiveIconSize,
   responsiveSize,
   responsiveSpacing
 } from "@/utils/responsive";
 import Entypo from "@expo/vector-icons/Entypo";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Tabs } from "expo-router";
-import React from "react";
+import { Tabs, useFocusEffect } from "expo-router";
+import React, { useCallback } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -29,12 +28,12 @@ function iconFor(
     case "notification":
     case "notifications":
       return "bell";
-    case "account":
+    case "package":
     case "saved":
       return "bookmark";
     case "profile":
     case "profiles":
-      return "pie-chart";
+      return "user";
     case "stats":
       return "bar-graph";
     default:
@@ -78,7 +77,7 @@ const TabButton = ({
       <View style={styles.tabContent}>
         <Entypo
           name={iconFor(route.name)}
-          size={responsiveIconSize(isSmallScreen() ? 20 : isLargeScreen() ? 24 : 22)}
+          size={responsiveIconSize(isSmallScreen() ? 18 : isLargeScreen() ? 20 : 19)}
           color={isFocused ? ENHANCED_COLORS.primary[500] : INACTIVE}
         />
       </View>
@@ -110,6 +109,13 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 const TabLayout = () => {
+  // Force navigate to home tab when tabs layout mounts
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🏠 TabLayout mounted - ensuring home tab is focused');
+    }, [])
+  );
+
   return (
     <View style={{ flex: 1}}>
       <Tabs
@@ -118,11 +124,37 @@ const TabLayout = () => {
           headerShown: false,
           tabBarStyle: { display: 'none' } // Hide default tab bar
         }}
+        initialRouteName="index" // Đảm bảo tab home được hiển thị đầu tiên
+        backBehavior="initialRoute" // Luôn quay về tab đầu tiên khi back
       >
-        <Tabs.Screen name="index" options={{ title: "Trang chủ" }} />
-        <Tabs.Screen name="notification" options={{ title: "Thông báo" }} />
-        <Tabs.Screen name="account" options={{ title: "Đã lưu" }} />
-        <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+        <Tabs.Screen 
+          name="index" 
+          options={{ 
+            title: "Trang chủ",
+            tabBarLabel: "Trang chủ"
+          }} 
+        />
+        <Tabs.Screen 
+          name="notification" 
+          options={{ 
+            title: "Thông báo",
+            tabBarLabel: "Thông báo"
+          }} 
+        />
+        <Tabs.Screen 
+          name="package" 
+          options={{ 
+            title: "Gói dịch vụ",
+            tabBarLabel: "Gói dịch vụ"
+          }} 
+        />
+        <Tabs.Screen 
+          name="profile" 
+          options={{ 
+            title: "Profile",
+            tabBarLabel: "Profile"
+          }} 
+        />
       </Tabs>
     </View>
   );
@@ -134,20 +166,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
- 
-    zIndex: 9999,
-    elevation: 9999,
-    backgroundColor: 'transparent',
+   
+    backgroundColor: 'white',
+    paddingBottom: 10, // Remove any bottom padding
   },
   tabBarContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    height: responsiveSize(50),
+    height: responsiveSize(60), // Reduced height
     backgroundColor: ENHANCED_COLORS.background.primary,
-    borderTopLeftRadius: responsiveBorderRadius(12),
-    borderTopRightRadius: responsiveBorderRadius(12),
-    // Simple shadow
+    // Subtle shadow
     shadowColor: ENHANCED_COLORS.neutral[900],
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -158,9 +187,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: responsiveSpacing(8),
-    paddingHorizontal: responsiveSpacing(4),
-    minHeight: responsiveSize(50),
+    paddingVertical: responsiveSpacing(6),
+    paddingHorizontal: responsiveSpacing(2),
+    minHeight: responsiveSize(40),
   },
   tabContent: {
     alignItems: "center",

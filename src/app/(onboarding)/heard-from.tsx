@@ -1,5 +1,5 @@
 import QuestionLayout, {
-    OptionItem,
+  OptionItem,
 } from "@/components/onboarding/questionLayout";
 import { useOnboarding } from "@/context/onboarding.context";
 import { Ionicons } from "@expo/vector-icons";
@@ -51,7 +51,7 @@ const HeardFromScreen = () => {
   
   return (
     <QuestionLayout
-      progress={0.4}
+      progress={0.3}
       progressText="40%"
       question="Bạn biết tới Talkademy từ đâu?"
       options={options}
@@ -61,7 +61,7 @@ const HeardFromScreen = () => {
       onNext={(answers) => {
         // Lưu discoverSource (lấy option đầu tiên được chọn)
         const firstAnswer = answers.length > 0 ? answers[0] : "Khác";
-        const discoverSource = typeof firstAnswer === 'string' ? firstAnswer : firstAnswer.id;
+        const discoverSource = typeof firstAnswer === 'string' ? firstAnswer : firstAnswer.label;
         updateSurveyData({ discoverSource });
         router.push("/(onboarding)/selfAssess");
       }}

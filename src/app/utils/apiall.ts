@@ -54,7 +54,7 @@ export const getUserProfileAPI = () => {
 // User Survey APIs
 export const createUserSurveyAPI = (surveyData: {
   userId: number;
-  categoryId: number;
+  categoryIds: number[];
   discoverSource: string;
   selfAssessment: string;
   skillFocus: string;
@@ -74,6 +74,171 @@ export const getUserSurveyAPI = () => {
 
 export const checkUserSurveyExistsAPI = (userId: number) => {
   return api.get<IBackendRes<any>>(`user-surveys?userId=${userId}`);
+};
+
+// Kiểm tra xem user đã hoàn thành onboarding chưa (dựa trên survey)
+export const checkOnboardingStatusAPI = async (): Promise<boolean> => {
+  try {
+    console.log('🔍 Checking onboarding status via API...');
+
+    // Lấy username từ AsyncStorage
+    const username = await AsyncStorage.getItem('username');
+    if (!username) {
+      console.log('❌ No username found in AsyncStorage');
+      return false;
+    }
+
+    // Thử lấy từ cache trước
+    const cachedSurveys = await AsyncStorage.getItem('allSurveys');
+    if (cachedSurveys) {
+      const surveys = JSON.parse(cachedSurveys);
+      const hasSurvey = Array.isArray(surveys)
+        ? surveys.some(survey => survey.username === username)
+        : false;
+      console.log('📊 Survey check from cache:', hasSurvey);
+      return hasSurvey;
+    }
+
+    // Nếu không có cache, gọi API
+    const response = await getUserSurveyAPI();
+    console.log('📊 Survey check response:', response);
+
+    if (response && Array.isArray(response)) {
+      const hasSurvey = response.some(survey => survey.username === username);
+      console.log('📊 Survey exists check:', hasSurvey);
+      return hasSurvey;
+    }
+
+    console.log('❌ User has not completed onboarding (no surveys found)');
+    return false;
+
+  } catch (error: any) {
+    console.error('❌ Error checking onboarding status:', error);
+    return false;
+  }
+};
+
+// Kiểm tra onboarding status bằng cách so sánh accounts với surveys
+export const checkOnboardingStatusWithAccountsAPI = async (): Promise<boolean> => {
+  try {
+    console.log('🔍 Checking onboarding status with accounts comparison...');
+
+    // Lấy username từ AsyncStorage
+    const username = await AsyncStorage.getItem('username');
+    if (!username) {
+      console.log('❌ No username found in AsyncStorage');
+      return false;
+    }
+
+    console.log('📊 Current username from AsyncStorage:', username);
+
+    // Lấy tất cả accounts và surveys
+    const [accountsResponse, surveysResponse] = await Promise.all([
+      getAllAccountsAPI(),
+      getUserSurveyAPI()
+    ]);
+
+    console.log('📊 Accounts response:', accountsResponse);
+    console.log('📊 Surveys response:', surveysResponse);
+
+    // Lấy userId từ AsyncStorage để so sánh chính xác hơn
+    const userId = await AsyncStorage.getItem('userId');
+    console.log('🔍 UserId from storage:', userId);
+
+    // Kiểm tra xem user có tồn tại trong accounts không (so sánh bằng userId)
+    const userExistsInAccounts = Array.isArray(accountsResponse)
+      ? accountsResponse.some(account => {
+        console.log('🔍 Comparing account userId:', account.user?.id, 'with:', userId);
+        return userId ? account.user?.id === parseInt(userId) : account.user?.username === username;
+      })
+      : false;
+
+    // Kiểm tra xem user có survey không (so sánh bằng userId)
+    const userHasSurvey = Array.isArray(surveysResponse)
+      ? surveysResponse.some(survey => {
+        console.log('🔍 Comparing survey userId:', survey.user?.id, 'with:', userId);
+        return userId ? survey.user?.id === parseInt(userId) : survey.user?.username === username;
+      })
+      : false;
+
+    console.log('📊 User exists in accounts:', userExistsInAccounts);
+    console.log('📊 User has survey:', userHasSurvey);
+
+    // Nếu user có trong accounts và có survey thì đã hoàn thành onboarding
+    const hasCompletedOnboarding = userExistsInAccounts && userHasSurvey;
+
+    console.log('📊 Onboarding completed:', hasCompletedOnboarding);
+    return hasCompletedOnboarding;
+
+  } catch (error: any) {
+    console.error('❌ Error checking onboarding status with accounts:', error);
+    return false;
+  }
+};
+
+// Alternative: Kiểm tra onboarding status bằng user ID (nếu có)
+export const checkOnboardingStatusWithUserIdAPI = async (): Promise<boolean> => {
+  try {
+    console.log('🔍 Checking onboarding status with user ID comparison...');
+
+    // Lấy user ID từ AsyncStorage (nếu có)
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) {
+      console.log('❌ No userId found in AsyncStorage, falling back to username check');
+      return await checkOnboardingStatusWithAccountsAPI();
+    }
+
+    console.log('📊 Current userId from AsyncStorage:', userId);
+
+    // Lấy tất cả accounts và surveys
+    const [accountsResponse, surveysResponse] = await Promise.all([
+      getAllAccountsAPI(),
+      getUserSurveyAPI()
+    ]);
+
+    // Kiểm tra xem user có tồn tại trong accounts không
+    const userExistsInAccounts = Array.isArray(accountsResponse)
+      ? accountsResponse.some(account => account.user?.id === parseInt(userId))
+      : false;
+
+    // Kiểm tra xem user có survey không
+    const userHasSurvey = Array.isArray(surveysResponse)
+      ? surveysResponse.some(survey => survey.user?.id === parseInt(userId))
+      : false;
+
+    console.log('📊 User exists in accounts (by ID):', userExistsInAccounts);
+    console.log('📊 User has survey (by ID):', userHasSurvey);
+
+    // Nếu user có trong accounts và có survey thì đã hoàn thành onboarding
+    const hasCompletedOnboarding = userExistsInAccounts && userHasSurvey;
+
+    console.log('📊 Onboarding completed (by ID):', hasCompletedOnboarding);
+    return hasCompletedOnboarding;
+
+  } catch (error: any) {
+    console.error('❌ Error checking onboarding status with user ID:', error);
+    return false;
+  }
+};
+
+// Lấy tất cả accounts
+export const getAllAccountsAPI = () => {
+  console.log('🌐 API Call - GET /accounts');
+  return api.get<IBackendRes<any>>("accounts");
+};
+
+// Lấy tất cả categories
+export const getAllCategoriesAPI = () => {
+  console.log('🌐 API Call - GET /categories');
+  return api.get<IBackendRes<any>>("categories");
+};
+
+// Lấy categories theo userId (account type)
+export const getCategoriesByAccountAPI = (userId: number) => {
+  console.log('🌐 API Call - GET /categories/by-account');
+  console.log('🌐 Request params:', { userId });
+
+  return api.get<IBackendRes<any>>(`categories/by-account/${userId}`);
 };
 
 // Lấy thông tin account theo ID
@@ -102,69 +267,6 @@ export const updatePasswordAPI = (oldPassword: string, newPassword: string, conf
   })
 };
 
-export const getProductDetailAPI = (id: string) => api.get<IBackendRes<any>>(`Product/${id}`);
-export const getProductVariantsAPI = (id: string) => api.get<IBackendRes<any>>(`ProductVariant/product/${id}`);
-export const addToCartAPI = (
-  data: { productVariantId: string | null; quantity: number }[]
-) => api.post<IBackendRes<any>>("Cart", data);
-export const updateCartItemAPI = ({
-  cartItemId,
-  quantity,
-}: {
-  cartItemId: string;
-  quantity: number;
-}) => {
-  return api.put<IBackendRes<any>>(`Cart/${cartItemId}`, { quantity });
-};
-
-// Xóa 1 item khỏi giỏ
-export const removeCartItemAPI = (cartItemId: string[]) => {
-  return api.delete<IBackendRes<any>>("Cart", {
-    data: cartItemId,
-  } as any);
-};
-export const getCartAPI = () => {
-  return api.get<IBackendRes<any>>("Cart"); // URL tùy theo backend bạn
-};
-export const getProductVariantAPI = (variantId: string) =>
-  api.get<IBackendRes<any>>(`ProductVariant/${variantId}`);
-export const fetchCategoriesAPI = () =>
-  api.get<IBackendRes<any>>(`Category`);
-export const calculateCartTotalAPI = (cartItemIds: string[]) => {
-  return api.post<IBackendRes<any>>("Cart/calculate-total", cartItemIds, {
-    headers: { "Content-Type": "application/json" },
-  });
-};
-export const getUserAddressesAPI = () => {
-  return api.get<IBackendRes<any>>("UserAddress");
-};
-// Lấy danh sách phương thức giao hàng
-export const getShippingMethodsAPI = () => {
-  // Đường dẫn API giống web
-  return api.get("/admin/shipping-methods");
-};// Đặt hàng
-export const placeOrderAPI = (payload: any) => {
-  return api.post("Orders", payload);
-};
-export const getOrderDetailAPI = (orderId: string) => {
-  return api.get(`Orders/${orderId}`);
-};
-
-// Lấy design mới nhất
-export const fetchNewestDesignAPI = () =>
-  api.get("CustomDesign/filter-user?PageSize=1&SortBy=CreatedAt&SortDescending=true");
-
-// Lấy lịch sử
-export const fetchDesignHistoryAPI = () =>
-  api.get("CustomDesign/filter-user?PageSize=20");
-
-// Tạo mới design
-export const createDesignAPI = (payload: string) =>
-  api.post("CustomDesign", payload);
-
-// Thay đổi trạng thái
-export const updateDesignStatusAPI = (id: string, status: any) =>
-  api.patch(`CustomDesign/${id}/status`, { status });
 
 
 
@@ -189,6 +291,16 @@ export const backEndURL = () => {
 }
 
 
+// Reading Passage APIs
+export const getReadingPassageByCategoryAPI = (categoryId: number) => {
+  console.log('🌐 API Call - GET /reading-passage/category');
+  console.log('🌐 Request params:', { categoryId });
+
+  return api.get<IBackendRes<any>>("reading-passage/category", {
+    params: { categoryId }
+  });
+};
+
 export const currencyFormatter = (value: any) => {
   const options = {
     significantDigits: 2,
@@ -207,23 +319,14 @@ export const currencyFormatter = (value: any) => {
   )} ${options.symbol}`
 }
 
-// mockApi.ts
-export const mockLikeProductAPI = async (productId: string, quantity: number) => {
-  // Giả lập response delay và kết quả
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Giả lập thành công
-      resolve({
-        data: {
-          productId,
-          quantity,
-          success: true,
-        },
-        message: "Success",
-      });
-    }, 500); // 500ms delay giả lập API
-  });
+// Packages API
+export const getAllPackagesAPI = () => {
+  console.log('🌐 API Call - GET /packages');
+  return api.get<IBackendRes<any>>("packages");
 };
+
+// mockApi.ts
+
 
 
 

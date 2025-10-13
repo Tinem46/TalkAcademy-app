@@ -1,11 +1,11 @@
-import { getAccountByIdAPI, getUserProfileAPI } from "@/app/utils/apiall";
+import { getUserProfileAPI } from "@/app/utils/apiall";
 import SafeAreaTabWrapper from "@/components/layout/SafeAreaTabWrapper";
 import { useCurrentApp } from "@/context/app.context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-root-toast";
 
 // Interface cho User Profile
@@ -23,43 +23,32 @@ interface UserProfile {
   userPackages: any[];
 }
 
-// Interface cho Account Info
-interface AccountInfo {
-  id: number;
-  type: string;
-  trialExpiresAt: string;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    avatar: string | null;
-    googleId: string | null;
-    password: string;
-    refreshToken: string;
-    role: string;
-  };
-}
-
 
 const Card = ({
   title,
   desc,
   icon,
+  onPress,
 }: {
   title: string;
   desc: string;
   icon: React.ReactNode;
+  onPress?: () => void;
 }) => (
-  <View style={styles.card}>
+  <TouchableOpacity 
+    style={styles.card} 
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
     <View style={styles.iconWrap}>{icon}</View>
     <View style={styles.cardContent}>
       <Text style={styles.cardTitle}>{title}</Text>
       <Text style={styles.cardDesc}>{desc}</Text>
     </View>
-  </View>
+  </TouchableOpacity>
 );
 
-const ProfileSection = ({ userProfile, accountInfo, loading }: { userProfile: UserProfile | null; accountInfo: AccountInfo | null; loading: boolean }) => {
+const ProfileSection = ({ userProfile, loading }: { userProfile: UserProfile | null; loading: boolean }) => {
   if (loading) {
     return (
       <View style={styles.section}>
@@ -78,28 +67,12 @@ const ProfileSection = ({ userProfile, accountInfo, loading }: { userProfile: Us
       
       <View style={styles.profileCard}>
         <View style={styles.avatarContainer}>
-          {userProfile?.avatar ? (
-            <Ionicons name="person-circle" size={60} color="#2FA6F3" />
-          ) : (
-            <Ionicons name="person-circle" size={60} color="#2FA6F3" />
-          )}
+          <Ionicons name="person-circle" size={60} color="#2FA6F3" />
         </View>
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>{userProfile?.username || 'Chưa cập nhật'}</Text>
           <Text style={styles.profileEmail}>{userProfile?.email || 'Chưa cập nhật'}</Text>
           <Text style={styles.profileLevel}>{userProfile?.role || 'CUSTOMER'}</Text>
-          {/* <Text style={styles.profileId}>ID: {userProfile?.id || 'N/A'}</Text> */}
-          {accountInfo && (
-            <>
-              <Text style={styles.profileAccountType}>Loại tài khoản: {accountInfo.type}</Text>
-              <Text style={styles.profileTrialExpiry}>
-                {accountInfo.type === 'TRIAL' 
-                  ? `Hết hạn dùng thử: ${new Date(accountInfo.trialExpiresAt).toLocaleDateString('vi-VN')}`
-                  : `Ngày bắt đầu: ${new Date(accountInfo.trialExpiresAt).toLocaleDateString('vi-VN')}`
-                }
-              </Text>
-            </>
-          )}
         </View>
       </View>
 
@@ -136,11 +109,13 @@ const AnalysisSection = ({ userProfile }: { userProfile: UserProfile | null }) =
         icon={
           <MaterialCommunityIcons name="chart-bar" size={40} color="#2FA6F3" />
         }
+        onPress={() => router.push('/(onboarding)/voiceCheck')}
       />
-      <Card
+      <Card 
         title="Bài luyện tập"
         desc={`Đã luyện tập ${totalPractices} bài. ${totalPractices > 0 ? 'Luyện tập thường xuyên sẽ giúp phát âm chuẩn hơn!' : 'Bắt đầu luyện tập để cải thiện phát âm.'}`}
         icon={<Ionicons name="book" size={40} color="#2FA6F3" />}
+        onPress={() => router.push('/(exercise)/categories')}
       />
       <Card
         title="Gói học"
@@ -148,6 +123,7 @@ const AnalysisSection = ({ userProfile }: { userProfile: UserProfile | null }) =
         icon={
           <MaterialCommunityIcons name="package-variant" size={40} color="#2FA6F3" />
         }
+        onPress={() => router.push('/(tabs)/package')}
       />
     </View>
   );
@@ -185,46 +161,10 @@ const AnalysisSection = ({ userProfile }: { userProfile: UserProfile | null }) =
 export default function ProfileScreen() {
   const { setAppState } = useCurrentApp();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAccountInfo = useCallback(async () => {
-    try {
-      // Lấy account ID từ AsyncStorage hoặc sử dụng user ID
-      const accountId = await AsyncStorage.getItem('accountId');
-      const userId = userProfile?.id?.toString();
-      
-      const idToUse = accountId || userId || '1';
-      console.log('🔍 Fetching account info for ID:', idToUse);
-      
-      const response = await getAccountByIdAPI(idToUse);
-      console.log('📊 Account API Response:', response);
-      
-      if (response) {
-        const accountData = response as unknown as AccountInfo;
-        setAccountInfo(accountData);
-        console.log('✅ Account info loaded successfully:', accountData);
-        console.log('🏷️ Account Type:', accountData.type);
-        console.log('📅 Trial Expires At:', accountData.trialExpiresAt);
-      } else {
-        console.log('⚠️ No account data in response');
-      }
-    } catch (error: any) {
-      console.error('💥 Error fetching account info:', error);
-      console.error('💥 Error details:', error?.response?.data);
-      
-      // Không hiển thị toast cho account info vì không quan trọng bằng profile
-      console.log('ℹ️ Account info is optional, continuing...');
-    }
-  }, [userProfile?.id]);
-
-
-  useEffect(() => {
-    fetchUserProfile();
-    fetchAccountInfo();
-  }, [fetchAccountInfo]);
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -284,7 +224,22 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchUserProfile();
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchUserProfile]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -340,42 +295,20 @@ export default function ProfileScreen() {
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#2FA6F3']} // Android
+            tintColor="#2FA6F3" // iOS
+          />
+        }
       >
         <View style={styles.headerContainer}>
           <Text style={styles.h1}>Profile</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity 
-              style={styles.testButton} 
-              onPress={() => {
-                console.log('🧪 Testing surveys fetch...');
-                // Surveys functionality removed
-              }}
-              disabled={false}
-            >
-              <Ionicons 
-                name="flask" 
-                size={20} 
-                color="#10B981" 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.refreshButton} 
-              onPress={() => {
-                fetchUserProfile();
-                fetchAccountInfo();
-              }}
-              disabled={loading}
-            >
-              <Ionicons 
-                name="refresh" 
-                size={24} 
-                color={loading ? "#9CA3AF" : "#2FA6F3"} 
-              />
-            </TouchableOpacity>
-          </View>
         </View>
         
-        <ProfileSection userProfile={userProfile} accountInfo={accountInfo} loading={loading} />
+        <ProfileSection userProfile={userProfile} loading={loading} />
         <AnalysisSection userProfile={userProfile} />
         {/* <DebugSection userProfile={userProfile} /> */}
         
@@ -393,7 +326,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+   
   },
   scrollContent: {
     padding: 20,
@@ -416,13 +349,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#2C5530",
     flex: 1,
-  },
-  refreshButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: "#F0F9FF",
-    borderWidth: 1,
-    borderColor: "#E0F2FE",
   },
   testButton: {
     padding: 8,
@@ -481,18 +407,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   profileId: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
-    marginTop: 2,
-  },
-  profileAccountType: {
-    fontSize: 14,
-    color: "#059669",
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  profileTrialExpiry: {
     fontSize: 12,
     color: "#6B7280",
     fontWeight: "500",

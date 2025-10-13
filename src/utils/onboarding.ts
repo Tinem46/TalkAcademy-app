@@ -6,7 +6,7 @@ const ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
 // Interface cho dữ liệu survey
 export interface SurveyData {
     userId: number;
-    categoryId: number;
+    categoryIds: number[];
     discoverSource: string;
     selfAssessment: string;
     skillFocus: string;
@@ -37,13 +37,23 @@ export const saveOnboardingSurvey = async (surveyData: SurveyData): Promise<bool
         console.log('📊 Response keys:', Object.keys(response || {}));
 
         // Vì interceptor trả về response.data, chúng ta cần kiểm tra khác
-        if (response && (response.id || response.user || response.category)) {
-            // Lưu trạng thái local
-            await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+        console.log('📊 Response structure check:', {
+            hasId: !!response?.id,
+            hasUser: !!response?.user,
+            hasCategory: !!response?.category,
+            hasCategories: !!response?.categories,
+            responseKeys: Object.keys(response || {}),
+            responseType: typeof response,
+            isArray: Array.isArray(response)
+        });
+
+        if (response && (response.id || response.user || response.category || response.categories)) {
+            // Không lưu vào AsyncStorage nữa, chỉ dựa vào API
             console.log('✅ Onboarding survey saved successfully');
             return true;
         } else {
             console.error('❌ Failed to save survey - unexpected response format:', response);
+            console.error('❌ Response details:', JSON.stringify(response, null, 2));
             return false;
         }
     } catch (error: any) {
@@ -66,7 +76,7 @@ export const saveOnboardingSurvey = async (surveyData: SurveyData): Promise<bool
     }
 };
 
-// Kiểm tra xem user đã hoàn thành onboarding chưa (qua API)
+// Kiểm tra xem user đã hoàn thành onboarding chưa (chỉ qua API)
 export const getOnboardingCompleted = async (): Promise<boolean> => {
     try {
         // Lấy userId từ AsyncStorage
@@ -77,7 +87,7 @@ export const getOnboardingCompleted = async (): Promise<boolean> => {
         }
 
         // Kiểm tra qua API
-        const response = await getUserSurveyAPI(parseInt(userId));
+        const response = await getUserSurveyAPI();
 
         console.log('📊 Survey check response:', response);
         console.log('📊 Response type:', typeof response);
@@ -86,16 +96,10 @@ export const getOnboardingCompleted = async (): Promise<boolean> => {
             // Kiểm tra xem có dữ liệu survey không
             const hasSurvey = Array.isArray(response) ? response.length > 0 : (response && Object.keys(response).length > 0);
             console.log('📊 Survey exists check:', hasSurvey);
-
-            // Cập nhật trạng thái local để đồng bộ
-            await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, hasSurvey ? 'true' : 'false');
-
             return hasSurvey;
         } else {
-            // Fallback về kiểm tra local nếu API lỗi
-            console.log('⚠️ API check failed, falling back to local storage');
-            const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
-            return completed === 'true';
+            console.log('❌ No survey data found');
+            return false;
         }
     } catch (error: any) {
         console.error('❌ Error checking onboarding status:', error);
@@ -104,22 +108,14 @@ export const getOnboardingCompleted = async (): Promise<boolean> => {
         if (error?.response?.status === 404) {
             // User chưa có survey (404 = Not Found)
             console.log('📊 User has no survey (404)');
-            await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'false');
             return false;
         } else if (error?.response?.status === 500) {
-            // Server error, fallback về local storage
-            console.log('⚠️ Server error (500), falling back to local storage');
+            // Server error
+            console.log('⚠️ Server error (500)');
+            return false;
         } else {
-            // Các lỗi khác, fallback về local storage
-            console.log('⚠️ API error, falling back to local storage');
-        }
-
-        // Fallback về kiểm tra local nếu có lỗi
-        try {
-            const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
-            return completed === 'true';
-        } catch (localError) {
-            console.error('❌ Error checking local storage:', localError);
+            // Các lỗi khác
+            console.log('⚠️ API error');
             return false;
         }
     }

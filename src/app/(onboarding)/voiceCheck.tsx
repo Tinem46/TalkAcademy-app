@@ -1,3 +1,4 @@
+import { getReadingPassageByCategoryAPI } from "@/app/utils/apiall";
 import ShareButton from "@/components/button/share.button";
 import QuoteCard from "@/components/card/quoteCard";
 import { RecordingListModal } from "@/components/modal";
@@ -9,8 +10,9 @@ import {
 } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
@@ -22,6 +24,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const VoiceCheckScreen = ({ navigation }: any) => {
   const [showRecordingsModal, setShowRecordingsModal] = useState(false);
+  const [readingPassage, setReadingPassage] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { recordings, addRecording, deleteRecording } = useRecordings();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
  
@@ -48,6 +53,39 @@ const VoiceCheckScreen = ({ navigation }: any) => {
   };
 
   const responsiveMicSize = isSmallScreen ? 35 : isMediumScreen ? 40 : isTablet ? 50 : 45;
+
+  // Fetch reading passage on component mount
+  useEffect(() => {
+    const fetchReadingPassage = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('📖 Fetching reading passage for categoryId = 1');
+        
+        const response = await getReadingPassageByCategoryAPI(1);
+        console.log('📖 API Response:', response);
+        
+        if (response && Array.isArray(response) && response.length > 0) {
+          const passage = response[0];
+          setReadingPassage(passage.content || "");
+          console.log('📖 Reading passage loaded:', passage.content);
+        } else {
+          // Fallback to default text if no passage found
+          setReadingPassage("Xin chào, tôi tên là Hoàng Anh. Tôi rất thích học ngoại ngữ, đặc biệt là tiếng Việt. Mỗi ngày, tôi dành khoảng 30 phút để luyện nói trước gương hoặc qua ứng dụng. Tôi hy vọng giọng nói của mình sẽ rõ ràng và tự nhiên hơn trong tương lai.");
+          console.log('📖 Using fallback text');
+        }
+      } catch (err) {
+        console.error('❌ Error fetching reading passage:', err);
+        setError('Không thể tải bài đọc');
+        // Use fallback text on error
+        setReadingPassage("Xin chào, tôi tên là Hoàng Anh. Tôi rất thích học ngoại ngữ, đặc biệt là tiếng Việt. Mỗi ngày, tôi dành khoảng 30 phút để luyện nói trước gương hoặc qua ứng dụng. Tôi hy vọng giọng nói của mình sẽ rõ ràng và tự nhiên hơn trong tương lai.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReadingPassage();
+  }, []);
 
   const handleRecordingStart = () => {
     console.log('Recording started');
@@ -168,21 +206,36 @@ const VoiceCheckScreen = ({ navigation }: any) => {
           </Pressable>
         </View>
 
-        <QuoteCard
-          text="Xin chào, tôi tên là Hoàng Anh. Tôi rất thích học ngoại ngữ, đặc biệt là tiếng Việt. Mỗi ngày, tôi dành khoảng 30 phút để luyện nói trước gương hoặc qua ứng dụng. Tôi hy vọng giọng nói của mình sẽ rõ ràng và tự nhiên hơn trong tương lai."
-          showMicIcon={false}
-          style={dynamicStyles.quoteCard}
-          colors={{
-            background: "#E5E7EA",
-            question: "#43b7fa",
-            quoteMark: "#1B7A6C",
-          }}
-          textStyle={{ 
-            fontSize: responsiveFontSize.quote, 
-            lineHeight: responsiveFontSize.quote * 1.4,
-            textAlign: isTablet ? 'center' : 'left',
-          }}
-        />
+        {loading ? (
+          <View style={[dynamicStyles.quoteCard, { alignItems: 'center', justifyContent: 'center', minHeight: 200 }]}>
+            <ActivityIndicator size="large" color="#3AA1E0" />
+            <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>Đang tải bài đọc...</Text>
+          </View>
+        ) : (
+          <QuoteCard
+            text={readingPassage}
+            showMicIcon={false}
+            style={dynamicStyles.quoteCard}
+            colors={{
+              background: "#E5E7EA",
+              question: "#43b7fa",
+              quoteMark: "#1B7A6C",
+            }}
+            textStyle={{ 
+              fontSize: responsiveFontSize.quote, 
+              lineHeight: responsiveFontSize.quote * 1.4,
+              textAlign: isTablet ? 'center' : 'left',
+            }}
+          />
+        )}
+        
+        {error && (
+          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+            <Text style={{ color: '#FF6B6B', textAlign: 'center', fontSize: 14 }}>
+              {error}
+            </Text>
+          </View>
+        )}
 
         <View style={dynamicStyles.center}>
           <VoiceRecorder

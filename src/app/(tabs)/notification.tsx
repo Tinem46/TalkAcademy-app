@@ -1,7 +1,7 @@
 import SafeAreaTabWrapper from "@/components/layout/SafeAreaTabWrapper";
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 type NoticeKind = "done" | "speaker" | "minus";
 
@@ -45,10 +45,20 @@ const ICON_COLOR = "#2AB6FF";
 
 export default function NotificationsScreen() {
   const [tab, setTab] = useState<"all" | "unread">("all");
+  const [refreshing, setRefreshing] = useState(false);
+  
   const data = useMemo(
     () => (tab === "all" ? DATA : DATA.filter((d) => !d.read)),
     [tab]
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    // Simulate API call
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
 
   const renderKindIcon = (kind: NoticeKind) => {
     switch (kind) {
@@ -94,6 +104,14 @@ export default function NotificationsScreen() {
         data={data}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingVertical: 8 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#2AB6FF']} // Android
+            tintColor="#2AB6FF" // iOS
+          />
+        }
         renderItem={({ item }) => (
           <View style={styles.item}>
             <View style={styles.iconWrap}>{renderKindIcon(item.kind)}</View>

@@ -16,11 +16,11 @@ const CustomHeader = () => {
       AnimationUtils.fadeIn(fadeAnim, 400),
       AnimationUtils.slideInFromTop(slideAnim, 400),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   // Các path chính không hiển thị nút back
   const mainScreens = ["/", "/search", "/account"];
-  // Các route auth không hiển thị icon
+  // Các route auth và onboarding không hiển thị icon
   const authRoutes = [
     "/login",
     "/signup",
@@ -28,6 +28,15 @@ const CustomHeader = () => {
     "/request.password",
     "/verify",
     "/intro",
+    "/(onboarding)/intro",
+    "/(onboarding)/want-to-learn",
+    "/(onboarding)/heard-from",
+    "/(onboarding)/selfAssess",
+    "/(onboarding)/journeyDesign",
+    "/(onboarding)/why",
+    "/(onboarding)/goal",
+    "/(onboarding)/notificationStep",
+    "/(onboarding)/pathScreen",
   ];
   const isMainScreen = mainScreens.includes(pathname);
   const isAuthScreen = authRoutes.includes(pathname);
@@ -51,12 +60,19 @@ const CustomHeader = () => {
             <Feather name="home" size={24} color={ENHANCED_COLORS.secondary[500]} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={styles.leftIcon}
-            onPress={() => router.back()}
-          >
-            <Feather name="arrow-left" size={24} color={ENHANCED_COLORS.secondary[500]} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.leftIcon}
+              onPress={() => {
+                // Xử lý đặc biệt cho onboarding intro
+                if (pathname === "/(onboarding)/intro") {
+                  router.replace("/(auth)/welcome");
+                } else {
+                  router.back();
+                }
+              }}
+            >
+              <Feather name="arrow-left" size={24} color={ENHANCED_COLORS.secondary[500]} />
+            </TouchableOpacity>
         )}
       </Animated.View>
     );
@@ -82,9 +98,9 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
+    paddingTop: 80,
     paddingHorizontal: 20,
-    height: 100,
+    height: 60,
     backgroundColor: "transparent",
     position: "absolute",
     top: 0,

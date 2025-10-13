@@ -15,7 +15,7 @@ const WhyScreen = ({ navigation }: any) => {
 
   return (
     <QuestionLayout
-      progress={0.5}
+      progress={0.65}
       progressText="50%"
       question="Tại sao bạn muốn rèn luyện kỹ năng này?"
       options={options}

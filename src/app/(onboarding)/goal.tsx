@@ -1,5 +1,5 @@
 import QuestionLayout, {
-    OptionItem,
+  OptionItem,
 } from "@/components/onboarding/questionLayout";
 import { useOnboarding } from "@/context/onboarding.context";
 import { router } from "expo-router";
@@ -17,7 +17,7 @@ const GoalScreen = ({ navigation }: any) => {
 
   return (
     <QuestionLayout
-      progress={0.85}
+      progress={0.8}
       progressText="85%"
       question="Mục tiêu luyện tập của bạn là tần suất nào?"
       options={options}
@@ -27,7 +27,7 @@ const GoalScreen = ({ navigation }: any) => {
       onNext={(answers) => {
         // Lưu trainingGoal
         const firstAnswer = answers.length > 0 ? answers[0] : "2 ngày / tuần";
-        const trainingGoal = typeof firstAnswer === 'string' ? firstAnswer : firstAnswer.id;
+        const trainingGoal = typeof firstAnswer === 'string' ? firstAnswer : firstAnswer.label;
         updateSurveyData({ trainingGoal });
         router.push({
           pathname: "/(onboarding)/notificationStep",

@@ -46,7 +46,7 @@ export const MASCOT_ASSETS: Record<MascotType, MascotConfig> = {
     }
   },
   logoFB: {
-    source: require('@/assets/Mascot/Asset 1logoFB.png'),
+    source: require('@/assets/Mascot/Asset1logoFB.png'),
     name: 'Logo Facebook',
     description: 'Mascot với logo Facebook',
     defaultSize: { width: 250, height: 250 },
@@ -90,7 +90,7 @@ export const MASCOT_ASSETS: Record<MascotType, MascotConfig> = {
     }
   },
   logoDoc: {
-    source: require('@/assets/Mascot/exe logo doc-01.png'),
+    source: require('@/assets/Mascot/logo.png'),
     name: 'Logo Dọc',
     description: 'Logo ứng dụng định dạng dọc',
     defaultSize: { width: 200, height: 300 },

@@ -1,5 +1,5 @@
 import QuestionLayout, {
-    OptionItem,
+  OptionItem,
 } from "@/components/onboarding/questionLayout";
 import { useOnboarding } from "@/context/onboarding.context";
 import { router } from "expo-router";
@@ -17,7 +17,7 @@ const SelfAssessScreen = ({ navigation }: any) => {
 
   return (
     <QuestionLayout
-      progress={0.15}
+      progress={0.45}
       progressText="15%"
       question="Bạn tự đánh giá trình độ hiện tại của mình về kỹ năng này như thế nào?"
       options={options}
@@ -26,7 +26,7 @@ const SelfAssessScreen = ({ navigation }: any) => {
       onNext={(answers) => {
         // Lưu selfAssessment
         const firstAnswer = answers.length > 0 ? answers[0] : "Tạm ổn";
-        const selfAssessment = typeof firstAnswer === 'string' ? firstAnswer : firstAnswer.id;
+        const selfAssessment = typeof firstAnswer === 'string' ? firstAnswer : firstAnswer.label;
         updateSurveyData({ selfAssessment });
         router.push({
           pathname: "/(onboarding)/journeyDesign",

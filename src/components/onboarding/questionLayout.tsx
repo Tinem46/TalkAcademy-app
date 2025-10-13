@@ -2,14 +2,14 @@ import ShareButton from "@/components/button/share.button";
 import { Feather } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import {
-  Image,
-  ImageSourcePropType,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Image,
+    ImageSourcePropType,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import QuoteCard from "../card/quoteCard";
 import ProgressBar from "./progressBar";
@@ -30,7 +30,7 @@ interface QuestionLayoutProps {
   initialSelected?: string[];
   nextLabel?: string;
   onBack?: () => void;
-  onNext: (answers: { id: string; value?: string }[]) => void;
+  onNext: (answers: { id: string; label: string; value?: string }[]) => void;
 }
 const BRAND_GREEN = "#1B7A6C";
 const CARD_BG = "#E7F4FF"; // Light blue background
@@ -77,6 +77,7 @@ const QuestionLayout: React.FC<QuestionLayoutProps> = ({
       .filter((o) => selected.includes(o.id) || o.type === "text")
       .map((o) => ({
         id: o.id,
+        label: o.label,
         value: o.type === "text" ? (textValues[o.id] || "").trim() : undefined,
       }))
       .filter((a) => (a.value ? a.value.length > 0 : selected.includes(a.id)));

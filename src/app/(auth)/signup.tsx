@@ -19,7 +19,6 @@ import * as Yup from "yup";
 
 import SocialButton from "@/components/button/social.button";
 import TextBetweenLine from "@/components/text/textline";
-import { clearOnboardingStatus } from "@/utils/onboarding";
 import { registerApi } from "../utils/apiall";
 
 // ===== Validation theo API mới =====
@@ -76,10 +75,12 @@ const SignUpPage = () => {
           const accountId = res.data?.account?.id || res.data?.user?.id || "1";
           await AsyncStorage.setItem('accountId', String(accountId));
           console.log('💾 Saved accountId from register:', accountId);
+
+          // Lưu username từ response
+          const savedUsername = res.data?.username || res.data?.user?.username || username;
+          await AsyncStorage.setItem('username', savedUsername);
+          console.log('💾 Saved username from register:', savedUsername);
         }
-        
-        // Xóa trạng thái onboarding cũ (nếu có) vì đây là user mới
-        await clearOnboardingStatus();
         
         // Chuyển đến onboarding vì đây là lần đầu đăng ký
         router.replace("/(onboarding)/intro");

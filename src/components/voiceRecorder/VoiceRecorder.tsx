@@ -217,11 +217,7 @@ const styles = StyleSheet.create({
     paddingVertical: responsiveSpacing(20),
   },
   pulseRing: {
-    position: "absolute",
-    width: responsiveSize(140),
-    height: responsiveSize(140),
-    borderRadius: responsiveSize(70),
-    backgroundColor: "#BFE4FF",
+    
   },
   micBtn: {
     width: responsiveSize(120),

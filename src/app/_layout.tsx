@@ -1,6 +1,7 @@
 import CustomHeader from "@/components/header/header";
 import { AppProvider } from "@/context/app.context";
 import { OnboardingProvider } from "@/context/onboarding.context";
+import { useAppState } from "@/hooks/useAppState";
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { ErrorBoundaryProps, Stack } from "expo-router";
 import { Button, StatusBar, Text, View } from "react-native";
@@ -33,6 +34,9 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 }
 
 const RootLayout = () => {
+  // Hook để detect app state changes
+  useAppState();
+  
   const navTheme = {
     ...DefaultTheme,
     colors: {
@@ -43,14 +47,14 @@ const RootLayout = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar
-        translucent
-        backgroundColor="transparent"
+        translucent={false}
+        backgroundColor="white"
         barStyle="dark-content"
       />
       <RootSiblingParent>
         <AppProvider>
           <OnboardingProvider>
-            <SafeAreaView style={{ flex: 1 }}>
+            <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
             <ThemeProvider value={navTheme}>
               <CustomHeader />
               <Stack

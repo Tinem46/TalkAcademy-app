@@ -18,7 +18,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import SocialButton from "@/components/button/social.button";
 import TextBetweenLine from "@/components/text/textline";
 import { useCurrentApp } from "@/context/app.context";
-import { getOnboardingCompleted } from "@/utils/onboarding";
 import { loginAPI } from "../utils/apiall";
 import { LoginSchema } from "../utils/validate.schema";
 
@@ -50,10 +49,16 @@ const Login = () => {
         await AsyncStorage.setItem("accountType", res.data.accountType || "TRIAL");
         await AsyncStorage.setItem("trialExpiresAt", res.data.trialExpiresAt || "");
         
-        // Lưu accountId từ response nếu có, hoặc sử dụng default
-        const accountId = res.data?.accountId || res.data?.user?.id || "1";
-        await AsyncStorage.setItem("accountId", String(accountId));
-        console.log('💾 Saved accountId:', accountId);
+        // Lưu userId từ response (id trong data)
+        const userId = res.data?.id || res.data?.user?.id || "1";
+        await AsyncStorage.setItem("userId", String(userId));
+        await AsyncStorage.setItem("accountId", String(userId)); // Giữ accountId để tương thích
+        console.log('💾 Saved userId:', userId);
+
+        // Lưu username từ response
+        const savedUsername = res.data?.username || res.data?.user?.username || username;
+        await AsyncStorage.setItem("username", savedUsername);
+        console.log('💾 Saved username:', savedUsername);
 
         // Cập nhật app state
         setAppState?.({
@@ -63,16 +68,8 @@ const Login = () => {
           trialExpiresAt: res.data.trialExpiresAt,
         });
 
-        // Kiểm tra xem user đã hoàn thành onboarding chưa
-        const hasCompletedOnboarding = await getOnboardingCompleted();
-        
-        if (hasCompletedOnboarding) {
-          // Nếu đã hoàn thành onboarding, chuyển đến trang chính
-          router.replace("/(tabs)");
-        } else {
-          // Nếu chưa hoàn thành onboarding, chuyển đến onboarding
-          router.replace("/(onboarding)/intro");
-        }
+        // Chuyển về trang chính (index.tsx sẽ kiểm tra onboarding status)
+        router.replace("/");
         
         Toast.show("Đăng nhập thành công!", { position: Toast.positions.TOP });
       } else {
