@@ -192,12 +192,12 @@ const Login = () => {
                 )}
               </View>
 
-              <Text
+              {/* <Text
                 style={styles.forgot}
                 onPress={() => router.navigate("/(auth)/request.password")}
               >
                 Forgot Password?
-              </Text>
+              </Text> */}
 
               {/* Nút đăng nhập + FAB */}
               <View style={styles.actionsRow}>

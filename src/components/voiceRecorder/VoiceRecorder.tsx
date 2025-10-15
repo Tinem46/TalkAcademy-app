@@ -46,6 +46,8 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const [recording, setRecording] = useState(false);
   const [recordingObject, setRecordingObject] = useState<Audio.Recording | null>(null);
   const pulse = useRef(new Animated.Value(0)).current;
+  const isUnloadingRef = useRef(false);
+  const recordingRef = useRef(false);
   
   // Tính toán kích thước responsive cho mic button
   const responsiveMicButtonSize = micButtonSize || responsiveIconSize(isSmallScreen() ? 35 : isLargeScreen() ? 50 : 40);
@@ -72,11 +74,15 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   // Cleanup khi component unmount
   useEffect(() => {
     return () => {
-      if (recordingObject) {
+      if (recordingObject && !isUnloadingRef.current) {
+        isUnloadingRef.current = true;
         try {
-          recordingObject.stopAndUnloadAsync();
+          // Chỉ cleanup nếu đang recording
+          if (recordingRef.current) {
+            recordingObject.stopAndUnloadAsync();
+          }
         } catch (error) {
-          console.warn('Recording already stopped:', error);
+          console.warn('Recording cleanup error:', error);
         }
       }
     };
@@ -110,11 +116,24 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   // Hàm bắt đầu thu âm
   const startRecording = async () => {
     try {
+      // Clean up any existing recording first
+      if (recordingObject && !isUnloadingRef.current) {
+        isUnloadingRef.current = true;
+        try {
+          await recordingObject.stopAndUnloadAsync();
+        } catch (cleanupError) {
+          console.warn('Cleanup error before starting new recording:', cleanupError);
+        } finally {
+          isUnloadingRef.current = false;
+        }
+      }
+
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecordingObject(recording);
       setRecording(true);
+      recordingRef.current = true;
       onRecordingStart?.();
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -124,21 +143,34 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
   // Hàm dừng thu âm
   const stopRecording = async () => {
-    if (!recordingObject) return;
+    if (!recordingObject || !recording || isUnloadingRef.current) return;
     
+    isUnloadingRef.current = true;
     try {
-      const uri = recordingObject.getURI();
+      console.log('🎤 Stopping recording...');
       await recordingObject.stopAndUnloadAsync();
+      const uri = recordingObject.getURI(); // ✅ Lấy URI SAU KHI stop
+      console.log('🎤 Recording stopped, URI:', uri);
+      
       setRecordingObject(null);
       setRecording(false);
-      console.log('Recording stopped, URI:', uri); // Debug log
-      onRecordingStop?.(uri || '');
+      recordingRef.current = false;
+      
+      if (uri) {
+        onRecordingStop?.(uri);
+      } else {
+        console.warn('⚠️ No URI received from recording');
+        Alert.alert('Lỗi', 'Không thể lưu file thu âm');
+      }
     } catch (error) {
       console.error('Failed to stop recording:', error);
       // Still reset state even if there's an error
       setRecordingObject(null);
       setRecording(false);
+      recordingRef.current = false;
       Alert.alert('Lỗi', 'Không thể dừng thu âm');
+    } finally {
+      isUnloadingRef.current = false;
     }
   };
 

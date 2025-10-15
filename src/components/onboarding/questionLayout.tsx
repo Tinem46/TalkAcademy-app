@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import QuoteCard from "../card/quoteCard";
 import ProgressBar from "./progressBar";
+import responsive, { responsiveSpacing } from "@/utils/responsive";
 
 export type OptionItem = {
   id: string;
@@ -203,8 +204,8 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: responsiveSpacing(16),
+    paddingTop: responsiveSpacing(70),
   },
 
   // header
@@ -212,8 +213,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16, // Giảm margin bottom từ 32 xuống 16
-    paddingHorizontal: 4,
+    marginBottom: responsiveSpacing(32), // Giảm margin bottom từ 32 xuống 16
+    paddingHorizontal: responsiveSpacing(4),
   },
 
   // quote card

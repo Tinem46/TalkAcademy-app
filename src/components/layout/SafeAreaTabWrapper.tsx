@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SafeAreaTabWrapperProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface SafeAreaTabWrapperProps {
 const SafeAreaTabWrapper: React.FC<SafeAreaTabWrapperProps> = ({ children, style }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     // Entrance animation for screen
@@ -34,7 +36,7 @@ const SafeAreaTabWrapper: React.FC<SafeAreaTabWrapperProps> = ({ children, style
         {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
-          paddingBottom: 80, // Reduced padding for smaller tab bar
+          paddingTop: insets.top, // Add padding top to avoid status bar overlap
         },
       ]}
     >

@@ -1,4 +1,4 @@
-import { getReadingPassageByCategoryAPI } from "@/app/utils/apiall";
+import { getReadingPassageByCategoryWithStatusAPI } from "@/app/utils/apiall";
 import SafeAreaTabWrapper from "@/components/layout/SafeAreaTabWrapper";
 import {
   getResponsivePadding,
@@ -18,11 +18,19 @@ interface ReadingPassage {
   content: string;
   level: string;
   createdAt: string;
-  category: {
+  isActive: boolean;
+  completedUsers: {
     id: number;
-    name: string;
-    description: string;
-  };
+    password: string;
+    username: string;
+    email: string;
+    googleId: string | null;
+    avatar: string | null;
+    refreshToken: string;
+    role: string;
+  }[];
+  isFinished: boolean;
+  isUnlocked: boolean;
 }
 
 export default function ReadingScreen() {
@@ -48,10 +56,10 @@ export default function ReadingScreen() {
 
     try {
       setLoading(true);
-      console.log('📚 Fetching reading passages for categoryId:', categoryId);
+      console.log('📚 Fetching reading passages with status for categoryId:', categoryId);
 
-      const response = await getReadingPassageByCategoryAPI(parseInt(categoryId));
-      console.log('📚 Reading passages response:', response);
+      const response = await getReadingPassageByCategoryWithStatusAPI(parseInt(categoryId));
+      console.log('📚 Reading passages with status response:', response);
 
       if (response && Array.isArray(response)) {
         setPassages(response);
@@ -210,14 +218,20 @@ export default function ReadingScreen() {
               key={passage.id}
               style={[
                 styles.passageCard,
+                !passage.isUnlocked && { opacity: 0.5 }, // Replace lockedCard style with inline opacity
                 {
                   transform: [{ scale: 1 }],
                 }
               ]}
               onPress={() => {
-                router.push(`/passage-detail?id=${passage.id}&title=${encodeURIComponent(passage.title)}&categoryId=${categoryId}`);
+                if (passage.isUnlocked) {
+                  router.push(`/passage-detail?id=${passage.id}&title=${encodeURIComponent(passage.title)}&categoryId=${categoryId}`);
+                } else {
+                  Toast.show("Bài đọc này đã bị khóa!", { position: Toast.positions.TOP });
+                }
               }}
-              activeOpacity={0.8}
+              activeOpacity={passage.isUnlocked ? 0.8 : 1}
+              disabled={!passage.isUnlocked}
             >
               {/* Gradient background effect */}
               <View style={styles.gradientBg} />
@@ -229,30 +243,74 @@ export default function ReadingScreen() {
               <View style={styles.iconWrap}>
                 <View style={styles.iconInner}>
                   <Ionicons
-                    name={getLevelIcon(passage.level)}
+                    name={
+                      !passage.isUnlocked 
+                        ? "lock-closed" 
+                        : passage.isFinished 
+                          ? "checkmark-circle" 
+                          : getLevelIcon(passage.level)
+                    }
                     size={responsiveSize(18)}
-                    color={getLevelColor(passage.level)}
+                    color={
+                      !passage.isUnlocked 
+                        ? "#9CA3AF" 
+                        : passage.isFinished 
+                          ? "#10B981" 
+                          : getLevelColor(passage.level)
+                    }
                   />
                 </View>
+               
               </View>
 
               {/* Content */}
               <View style={styles.content}>
-                <Text style={styles.passageTitle} numberOfLines={2}>
+                <Text style={[
+                  styles.passageTitle,
+                  !passage.isUnlocked && styles.lockedText
+                ]} numberOfLines={2}>
                   {passage.title}
                 </Text>
 
-                <Text style={styles.passageContent} numberOfLines={2}>
+                <Text style={[
+                  styles.passageContent,
+                  !passage.isUnlocked && styles.lockedText
+                ]} numberOfLines={2}>
                   {passage.content}
                 </Text>
 
                 {/* Read more button */}
-                <View style={styles.readMore}>
-                  <Text style={styles.readMoreText}>Đọc ngay</Text>
+                <View style={[
+                  styles.readMore,
+                  !passage.isUnlocked && styles.lockedReadMore
+                ]}>
+                  <Text style={[
+                    styles.readMoreText,
+                    !passage.isUnlocked && styles.lockedReadMoreText
+                  ]}>
+                    {!passage.isUnlocked 
+                      ? "Đã khóa" 
+                      : passage.isFinished 
+                        ? "Đã hoàn thành" 
+                        : "Đọc ngay"
+                    }
+                  </Text>
                   <Ionicons 
-                    name="arrow-forward" 
+                    name={
+                      !passage.isUnlocked 
+                        ? "lock-closed" 
+                        : passage.isFinished 
+                          ? "checkmark-circle" 
+                          : "arrow-forward"
+                    } 
                     size={responsiveSize(16)} 
-                    color="#2FA6F3" 
+                    color={
+                      !passage.isUnlocked 
+                        ? "#9CA3AF" 
+                        : passage.isFinished 
+                          ? "#10B981" 
+                          : "#2FA6F3"
+                    } 
                   />
                 </View>
               </View>
@@ -344,7 +402,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: responsiveSpacing(24),
-    marginTop: responsiveSpacing(8),
+    marginTop: responsiveSpacing(20), // Increased for status bar
   },
   backButton: {
     width: responsiveSize(44),
@@ -430,6 +488,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    position: "relative",
     // Enhanced shadow
     shadowColor: "#2FA6F3",
     shadowOpacity: 0.2,
@@ -495,6 +554,53 @@ const styles = StyleSheet.create({
     color: "#2FA6F3", 
     fontWeight: "800",
     fontSize: responsiveFontSize(14),
+  },
+  completionBadge: {
+    position: "absolute",
+    top: -responsiveSize(4),
+    right: -responsiveSize(4),
+    width: responsiveSize(20),
+    height: responsiveSize(20),
+    borderRadius: responsiveSize(10),
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    shadowColor: "#10B981",
+    shadowOpacity: 0.3,
+    shadowRadius: responsiveSize(4),
+    shadowOffset: { width: 0, height: responsiveSize(2) },
+    elevation: 4,
+  },
+  lockBadge: {
+    position: "absolute",
+    top: -responsiveSize(4),
+    right: -responsiveSize(4),
+    width: responsiveSize(20),
+    height: responsiveSize(20),
+    borderRadius: responsiveSize(10),
+    backgroundColor: "#9CA3AF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    shadowColor: "#9CA3AF",
+    shadowOpacity: 0.3,
+    shadowRadius: responsiveSize(4),
+    shadowOffset: { width: 0, height: responsiveSize(2) },
+    elevation: 4,
+  },
+  lockedText: {
+    color: "#9CA3AF",
+  },
+  lockedReadMore: {
+    borderColor: "#9CA3AF",
+    shadowColor: "#9CA3AF",
+    shadowOpacity: 0.05,
+  },
+  lockedReadMoreText: {
+    color: "#9CA3AF",
   },
   emptyContainer: {
     flex: 1,

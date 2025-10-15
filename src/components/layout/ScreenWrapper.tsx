@@ -45,8 +45,6 @@ const ScreenWrapper: React.FC<ScreenWrapperProps> = ({ children, style }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // Add padding bottom to prevent content from being hidden behind tab bar
-    paddingBottom: 100, // Adjust this value based on your tab bar height
   },
 });
 

@@ -113,7 +113,7 @@ const AnalysisSection = ({ userProfile }: { userProfile: UserProfile | null }) =
       />
       <Card 
         title="Bài luyện tập"
-        desc={`Đã luyện tập ${totalPractices} bài. ${totalPractices > 0 ? 'Luyện tập thường xuyên sẽ giúp phát âm chuẩn hơn!' : 'Bắt đầu luyện tập để cải thiện phát âm.'}`}
+        desc={`Đã luyện tập ${totalTests} bài. ${totalTests > 0 ? 'Luyện tập thường xuyên sẽ giúp phát âm chuẩn hơn!' : 'Bắt đầu luyện tập để cải thiện phát âm.'}`}
         icon={<Ionicons name="book" size={40} color="#2FA6F3" />}
         onPress={() => router.push('/(exercise)/categories')}
       />

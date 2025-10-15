@@ -1,7 +1,7 @@
 import { ENHANCED_COLORS } from '@/app/utils/constant';
 import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface SafeAreaWrapperProps {
   children: React.ReactNode;
@@ -14,18 +14,14 @@ const SafeAreaWrapper: React.FC<SafeAreaWrapperProps> = ({
   children,
   style,
   backgroundColor = ENHANCED_COLORS.background.secondary,
-  edges = ['top', 'bottom', 'left', 'right'],
+  edges = ['left', 'right'], // Removed 'top' and 'bottom' for full screen
 }) => {
-  const insets = useSafeAreaInsets();
-  
   return (
-    <View 
-    
-    >
-      <View style={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor }, style]} edges={edges}>
+      <View style={[styles.content, { paddingTop: 50 }]}>
         {children}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

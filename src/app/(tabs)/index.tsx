@@ -1,4 +1,4 @@
-import { getCategoriesByAccountAPI, getUserProfileAPI, getUserSurveyAPI } from "@/app/utils/apiall";
+import { getCategoriesProgressAPI, getUserProfileAPI, getUserSurveyAPI } from "@/app/utils/apiall";
 import CategoryCard from "@/components/card/categoryCard";
 import LatestEvaluationCard from "@/components/card/evaluationCard";
 import SafeAreaTabWrapper from "@/components/layout/SafeAreaTabWrapper";
@@ -36,7 +36,13 @@ interface Category {
   id: number;
   name: string;
   description: string;
-  isLock: boolean;
+  completedUsers: {
+    id: number;
+    email: string;
+    avatar: string | null;
+  }[];
+  isFinished: boolean;
+  isUnlocked: boolean;
 }
 
 const HomeScreen = ({ navigation }: any) => {
@@ -103,23 +109,16 @@ const HomeScreen = ({ navigation }: any) => {
     }
   }, []);
 
-  // Function để load categories từ API bằng userId từ AsyncStorage
+  // Function để load categories từ API mới
   const loadCategories = useCallback(async () => {
     try {
       setCategoriesLoading(true);
       
-      // Lấy userId từ AsyncStorage
-      const userId = await AsyncStorage.getItem('userId');
-      if (!userId) {
-        console.log('❌ No userId found in AsyncStorage');
-        return;
-      }
+      console.log('📚 Loading categories with progress...');
       
-      console.log('📚 Loading categories for userId:', userId);
-      
-      // Gọi API để lấy categories
-      const response = await getCategoriesByAccountAPI(parseInt(userId));
-      console.log('📚 Categories API response:', response);
+      // Gọi API mới để lấy categories với trạng thái hoàn thành
+      const response = await getCategoriesProgressAPI();
+      console.log('📚 Categories Progress API response:', response);
       
       if (response && Array.isArray(response)) {
         setCategories(response);
@@ -295,7 +294,7 @@ const HomeScreen = ({ navigation }: any) => {
                 key={categories[0].id}
                 category={categories[0]}
                 onPress={() => {
-                  if (!categories[0].isLock) {
+                  if (categories[0].isUnlocked) {
                     router.push(`/(exercise)/reading?categoryId=${categories[0].id}&categoryName=${encodeURIComponent(categories[0].name)}`);
                   }
                 }}
@@ -373,6 +372,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: responsiveSpacing(14),
+    marginTop: responsiveSpacing(32), // Increased margin for better spacing
   },
   greetingContainer: {
     flex: 1,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: "#0F3D57",
     fontWeight: "800",
-    marginTop: responsiveSpacing(8),
+    marginTop: responsiveSpacing(8), // Reduced since SafeAreaTabWrapper has paddingTop
     marginBottom: responsiveSpacing(8),
     fontSize: responsiveFontSize(24),
   },

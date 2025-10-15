@@ -47,14 +47,14 @@ const RootLayout = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar
-        translucent={false}
-        backgroundColor="white"
+        translucent={true}
+        backgroundColor="transparent"
         barStyle="dark-content"
       />
       <RootSiblingParent>
         <AppProvider>
           <OnboardingProvider>
-            <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+            <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
             <ThemeProvider value={navTheme}>
               <CustomHeader />
               <Stack

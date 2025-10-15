@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/loading/LoadingSpinner";
 import { useMascotManager } from "@/components/mascotWithBubble/MascotManager";
 import MascotWithBubble from "@/components/mascotWithBubble/mascotWithBubble";
 import TextBetweenLine from "@/components/text/textline";
-import { responsiveSize } from "@/utils/responsive";
+import { responsiveSize, responsiveSpacing } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -294,6 +294,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     marginVertical: 8,
     overflow: "hidden",
+    marginBottom: responsiveSpacing(100),
   },
   row: {
     flexDirection: "row",

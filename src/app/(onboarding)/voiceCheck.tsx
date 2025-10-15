@@ -1,4 +1,4 @@
-import { getReadingPassageByCategoryAPI } from "@/app/utils/apiall";
+import { analyzeVoiceAPI, getReadingPassageByIdAPI } from "@/app/utils/apiall";
 import ShareButton from "@/components/button/share.button";
 import QuoteCard from "@/components/card/quoteCard";
 import { RecordingListModal } from "@/components/modal";
@@ -9,6 +9,7 @@ import {
   getResponsivePadding
 } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -27,6 +28,8 @@ const VoiceCheckScreen = ({ navigation }: any) => {
   const [readingPassage, setReadingPassage] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const { recordings, addRecording, deleteRecording } = useRecordings();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
  
@@ -60,22 +63,21 @@ const VoiceCheckScreen = ({ navigation }: any) => {
       try {
         setLoading(true);
         setError(null);
-        console.log('📖 Fetching reading passage for categoryId = 1');
+        console.log('Fetching reading passage for id = 1');
         
-        const response = await getReadingPassageByCategoryAPI(1);
-        console.log('📖 API Response:', response);
+        const response = await getReadingPassageByIdAPI(1);
+        console.log('API Response:', response);
         
-        if (response && Array.isArray(response) && response.length > 0) {
-          const passage = response[0];
-          setReadingPassage(passage.content || "");
-          console.log('📖 Reading passage loaded:', passage.content);
+        if (response && (response as any).content) {
+          setReadingPassage((response as any).content);
+          console.log('Reading passage loaded:', (response as any).content);
         } else {
           // Fallback to default text if no passage found
           setReadingPassage("Xin chào, tôi tên là Hoàng Anh. Tôi rất thích học ngoại ngữ, đặc biệt là tiếng Việt. Mỗi ngày, tôi dành khoảng 30 phút để luyện nói trước gương hoặc qua ứng dụng. Tôi hy vọng giọng nói của mình sẽ rõ ràng và tự nhiên hơn trong tương lai.");
-          console.log('📖 Using fallback text');
+          console.log('Using fallback text');
         }
       } catch (err) {
-        console.error('❌ Error fetching reading passage:', err);
+        console.error('Error fetching reading passage:', err);
         setError('Không thể tải bài đọc');
         // Use fallback text on error
         setReadingPassage("Xin chào, tôi tên là Hoàng Anh. Tôi rất thích học ngoại ngữ, đặc biệt là tiếng Việt. Mỗi ngày, tôi dành khoảng 30 phút để luyện nói trước gương hoặc qua ứng dụng. Tôi hy vọng giọng nói của mình sẽ rõ ràng và tự nhiên hơn trong tương lai.");
@@ -87,6 +89,7 @@ const VoiceCheckScreen = ({ navigation }: any) => {
     fetchReadingPassage();
   }, []);
 
+
   const handleRecordingStart = () => {
     console.log('Recording started');
   };
@@ -94,6 +97,45 @@ const VoiceCheckScreen = ({ navigation }: any) => {
   const handleRecordingStop = async (uri: string) => {
     console.log('Recording stopped, URI:', uri);
     await addRecording(uri);
+    
+    // Analyze the recording
+    await analyzeRecording(uri);
+  };
+
+  const analyzeRecording = async (audioUri: string) => {
+    try {
+      setAnalyzing(true);
+      setError(null);
+      
+      console.log(' Analyzing recording:', audioUri);
+      
+      const audioFile = {
+        uri: audioUri,
+        type: 'audio/mp3',
+        name: `recording_${Date.now()}.mp3`,
+      };
+      
+      const response = await analyzeVoiceAPI(audioFile);
+      console.log('🎤 Analysis response:', response);
+      
+      if (response) {
+        setAnalysisResult(response as any);
+        console.log('🎤 Analysis completed:', (response as any).metrics?.voiceScore);
+        
+        // Lưu kết quả phân tích vào AsyncStorage để truyền sang trang evaluation
+        try {
+          await AsyncStorage.setItem('voiceAnalysisResult', JSON.stringify(response));
+          console.log('💾 Voice analysis result saved to storage');
+        } catch (storageError) {
+          console.warn('⚠️ Failed to save analysis result to storage:', storageError);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error analyzing recording:', err);
+      setError('Không thể phân tích giọng nói');
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleShowRecordings = () => {
@@ -233,6 +275,54 @@ const VoiceCheckScreen = ({ navigation }: any) => {
           <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
             <Text style={{ color: '#FF6B6B', textAlign: 'center', fontSize: 14 }}>
               {error}
+            </Text>
+          </View>
+        )}
+
+        {analyzing && (
+          <View style={{ paddingHorizontal: 16, marginBottom: 16, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color="#3AA1E0" />
+            <Text style={{ color: '#3AA1E0', textAlign: 'center', fontSize: 14, marginTop: 8 }}>
+              Đang phân tích giọng nói...
+            </Text>
+          </View>
+        )}
+
+        {analysisResult && analysisResult.status === 'success' && (
+          <View style={{ 
+            paddingHorizontal: 16, 
+            marginBottom: 16, 
+            backgroundColor: '#E8F5E8', 
+            borderRadius: 12, 
+            padding: 16,
+            alignItems: 'center'
+          }}>
+            <Text style={{ 
+              fontSize: 24, 
+              fontWeight: 'bold', 
+              color: '#2E7D32', 
+              textAlign: 'center', 
+              marginBottom: 8 
+            }}>
+              ✅ Hoàn thành bài test!
+            </Text>
+            
+            <Text style={{ 
+              fontSize: 16, 
+              color: '#2E7D32', 
+              textAlign: 'center',
+              marginBottom: 12
+            }}>
+              Giọng nói của bạn đã được phân tích thành công
+            </Text>
+
+            <Text style={{ 
+              fontSize: 14, 
+              color: '#666', 
+              textAlign: 'center',
+              fontStyle: 'italic'
+            }}>
+              Nhấn &quot;Tiếp tục&quot; để xem kết quả đánh giá chi tiết
             </Text>
           </View>
         )}

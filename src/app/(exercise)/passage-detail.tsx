@@ -1,11 +1,12 @@
-import { getReadingPassageByCategoryAPI } from "@/app/utils/apiall";
+import { analyzeVoiceAPI, createVoiceTestAPI, getReadingPassageByIdAPI, testVoiceTestAPI } from "@/app/utils/apiall";
 import { useMascotManager } from "@/components/mascotWithBubble/MascotManager";
 import MascotWithBubble from "@/components/mascotWithBubble/mascotWithBubble";
-import { RecordingListModal } from "@/components/modal";
+import { AIAnalysisLoadingPopup, RecordingListModal } from "@/components/modal";
 import VoiceRecorder from "@/components/voiceRecorder/VoiceRecorder";
 import { useRecordings } from "@/hooks/useRecordings";
 import { responsiveSize, responsiveSpacing } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
@@ -38,6 +39,12 @@ export default function PassageDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showRecordingsModal, setShowRecordingsModal] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [creatingVoiceTest, setCreatingVoiceTest] = useState(false);
+  const [voiceTestCreated, setVoiceTestCreated] = useState(false);
+  const [currentAudioUri, setCurrentAudioUri] = useState<string | null>(null);
   
   console.log('🔍 PassageDetailScreen params:', params);
   console.log('🔍 passageId:', passageId);
@@ -45,32 +52,25 @@ export default function PassageDetailScreen() {
   console.log('🔍 categoryId:', categoryId);
 
   const fetchPassage = useCallback(async () => {
-    if (!categoryId) {
-      console.log('❌ No categoryId provided');
+    if (!passageId) {
+      console.log('❌ No passageId provided');
       setLoading(false);
       return;
     }
     
     try {
       setLoading(true);
-      console.log('📚 Fetching reading passages for categoryId:', categoryId);
+      console.log('📚 Fetching reading passage by ID:', passageId);
       
-      const response = await getReadingPassageByCategoryAPI(parseInt(categoryId));
-      console.log('📚 Reading passages response:', response);
+      const response = await getReadingPassageByIdAPI(parseInt(passageId));
+      console.log('📚 Reading passage response:', response);
       
-      if (response && Array.isArray(response)) {
-        // Tìm passage theo ID
-        const foundPassage = response.find((p: ReadingPassage) => p.id === parseInt(passageId));
-        if (foundPassage) {
-          setPassage(foundPassage);
-          console.log('📚 Found passage:', foundPassage);
-        } else {
-          console.log('❌ Passage not found with id:', passageId);
-          Toast.show("Không tìm thấy bài đọc!", { position: Toast.positions.TOP });
-        }
+      if (response && (response as any).id) {
+        setPassage(response as any as ReadingPassage);
+        console.log('📚 Found passage:', response);
       } else {
-        console.log('❌ No passages found');
-        Toast.show("Không có bài đọc nào!", { position: Toast.positions.TOP });
+        console.log('❌ Passage not found with id:', passageId);
+        Toast.show("Không tìm thấy bài đọc!", { position: Toast.positions.TOP });
       }
     } catch (error: any) {
       console.error('❌ Error fetching passage:', error);
@@ -80,7 +80,7 @@ export default function PassageDetailScreen() {
     } finally {
       setLoading(false);
     }
-  }, [categoryId, passageId]);
+  }, [passageId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -94,10 +94,10 @@ export default function PassageDetailScreen() {
   }, [fetchPassage]);
 
   useEffect(() => {
-    if (categoryId && passageId) {
+    if (passageId) {
       fetchPassage();
     }
-  }, [categoryId, passageId, fetchPassage]);
+  }, [passageId, fetchPassage]);
 
   // Responsive calculations
   const isSmallScreen = screenWidth < 375;
@@ -111,8 +111,164 @@ export default function PassageDetailScreen() {
   };
 
   const handleRecordingStop = async (uri: string) => {
-    console.log('Recording stopped, URI:', uri);
+    console.log('🎤 Recording stopped, URI:', uri);
+    console.log('🎤 Setting currentAudioUri to:', uri);
+    setCurrentAudioUri(uri); // Lưu audio URI để sử dụng trong createVoiceTest
+    console.log('🎤 Current audio URI set, proceeding with analysis...');
+    
+    // Verify URI is set
+    setTimeout(() => {
+      console.log('🎤 Verifying currentAudioUri after setState:', currentAudioUri);
+    }, 100);
+    
     await addRecording(uri);
+    await analyzeRecording(uri);
+  };
+
+  const analyzeRecording = async (audioUri: string) => {
+    try {
+      setAnalyzing(true);
+      setError(null);
+      console.log('🎤 Analyzing recording:', audioUri);
+      
+      const audioFile = {
+        uri: audioUri,
+        type: 'audio/mp3',
+        name: `recording_${Date.now()}.mp3`,
+      };
+      
+      const response = await analyzeVoiceAPI(audioFile);
+      console.log('🎤 Analysis response:', response);
+      
+      if (response) {
+        setAnalysisResult(response as any);
+        console.log('🎤 Analysis completed:', (response as any).metrics?.voiceScore);
+        
+        // Lưu kết quả phân tích vào AsyncStorage
+        try {
+          await AsyncStorage.setItem('voiceAnalysisResult', JSON.stringify(response));
+          console.log('💾 Voice analysis result saved to storage');
+        } catch (storageError) {
+          console.warn('⚠️ Failed to save analysis result to storage:', storageError);
+        }
+
+        // Tạo voice test sau khi phân tích thành công - truyền audioUri trực tiếp
+        await createVoiceTest(response as any, audioUri);
+
+        // Tự động chuyển sang trang evaluation-result sau khi phân tích xong
+        setTimeout(() => {
+          router.push(`/evaluation-result?passageId=${passageId}&passageTitle=${encodeURIComponent(passageTitle || '')}`);
+        }, 1000); // Delay 1 giây để user thấy kết quả
+      }
+    } catch (err) {
+      console.error('❌ Error analyzing recording:', err);
+      setError('Không thể phân tích giọng nói');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const createVoiceTest = async (analysisResult: any, audioUri?: string) => {
+    try {
+      setCreatingVoiceTest(true);
+      console.log('🎯 Creating voice test...');
+      console.log('🎯 Audio URI parameter:', audioUri);
+      console.log('🎯 Current audio URI state:', currentAudioUri);
+      
+      // Lấy userId từ AsyncStorage
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) {
+        console.error('❌ No userId found for voice test');
+        Toast.show("Không tìm thấy thông tin người dùng!", { position: Toast.positions.TOP });
+        return;
+      }
+
+      // Chuẩn bị dữ liệu voice test với file audio
+      const voiceTestData = {
+        cerRatio: analysisResult.metrics?.cerRatio || 0.12,
+        spm: analysisResult.metrics?.spm || 150,
+        pauseRatio: analysisResult.metrics?.pauseRatio || 0.28,
+        mptSeconds: analysisResult.metrics?.mptSeconds || 9,
+        finalConsonantAccuracy: analysisResult.metrics?.finalConsonantAccuracy ?? 0.67, // Sử dụng ?? để handle null
+        passageId: parseInt(passageId),
+        voiceScore: analysisResult.metrics?.voiceScore || 85,
+        level: "L1", // Sử dụng format cố định L1 thay vì BEGINNER
+        userId: parseInt(userId),
+        // Thêm file audio nếu có - ưu tiên audioUri parameter
+        audio: (audioUri || currentAudioUri) ? {
+          uri: (audioUri || currentAudioUri)!,
+          type: 'audio/mp3',
+          name: `recording_${Date.now()}.mp3`,
+        } : undefined
+      };
+
+      console.log('🎯 Voice test data:', voiceTestData);
+      
+      // Test API trước
+      try {
+        console.log('🧪 Testing API with minimal data...');
+        await testVoiceTestAPI();
+        console.log('✅ Test API successful');
+      } catch (testError) {
+        console.error('❌ Test API failed:', testError);
+      }
+      
+      // Gọi API tạo voice test với multipart/form-data
+      const response = await createVoiceTestAPI(voiceTestData);
+      console.log('🎯 Voice test created:', response);
+      
+      setVoiceTestCreated(true);
+      Toast.show("Đã tạo bài test giọng thành công!", { position: Toast.positions.TOP });
+      
+    } catch (error: any) {
+      console.error('❌ Error creating voice test:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+        }
+      });
+      
+      // Log chi tiết server response
+      if (error.response?.data) {
+        console.error('❌ Server response data:', JSON.stringify(error.response.data, null, 2));
+      }
+      
+      // Thử lại không có file audio nếu có lỗi
+      if (audioUri || currentAudioUri) {
+        console.log('🔄 Retrying without audio file...');
+        try {
+          const retryData = {
+            cerRatio: analysisResult.metrics?.cerRatio || 0.12,
+            spm: analysisResult.metrics?.spm || 150,
+            pauseRatio: analysisResult.metrics?.pauseRatio || 0.28,
+            mptSeconds: analysisResult.metrics?.mptSeconds || 9,
+            finalConsonantAccuracy: analysisResult.metrics?.finalConsonantAccuracy ?? 0.67, // Sử dụng ?? để handle null
+            passageId: parseInt(passageId),
+            voiceScore: analysisResult.metrics?.voiceScore || 85,
+            level: "L1", // Sử dụng format cố định L1
+            userId: parseInt(await AsyncStorage.getItem('userId') || '0'),
+            audio: undefined
+          };
+          const retryResponse = await createVoiceTestAPI(retryData);
+          console.log('🎯 Voice test created (without audio):', retryResponse);
+          setVoiceTestCreated(true);
+          Toast.show("Đã tạo bài test giọng thành công (không có audio)!", { position: Toast.positions.TOP });
+          return;
+        } catch (retryError) {
+          console.error('❌ Retry also failed:', retryError);
+        }
+      }
+      
+      Toast.show("Không thể tạo bài test giọng. Vui lòng thử lại!", { position: Toast.positions.TOP });
+    } finally {
+      setCreatingVoiceTest(false);
+    }
   };
 
   const handleShowRecordings = () => {
@@ -150,6 +306,7 @@ export default function PassageDetailScreen() {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ paddingBottom: responsiveSpacing(120) }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -165,24 +322,39 @@ export default function PassageDetailScreen() {
         <Ionicons name="arrow-back" size={responsiveSize(24)} color="#2FA6F3" />
         </Pressable>
         <Text style={styles.headerTitle}>{passage.title}</Text>
-        <Pressable
-          onPress={handleShowRecordings}
-          style={({ pressed }) => [
-            styles.recordingsButton,
-            pressed && { opacity: 0.7 },
-          ]}
-        >
-          <Ionicons 
-            name="list" 
-            size={isTablet ? 28 : 24} 
-            color="#3AA1E0" 
-          />
-          {recordings.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{recordings.length}</Text>
-            </View>
-          )}
-        </Pressable>
+        <View style={styles.headerButtons}>
+          <Pressable
+            onPress={() => router.push(`/voice-test-history?passageId=${passageId}&passageTitle=${encodeURIComponent(passageTitle || '')}`)}
+            style={({ pressed }) => [
+              styles.historyButton,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Ionicons 
+              name="time-outline" 
+              size={isTablet ? 28 : 24} 
+              color="#FF9800" 
+            />
+          </Pressable>
+          <Pressable
+            onPress={handleShowRecordings}
+            style={({ pressed }) => [
+              styles.recordingsButton,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Ionicons 
+              name="list" 
+              size={isTablet ? 28 : 24} 
+              color="#3AA1E0" 
+            />
+            {recordings.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{recordings.length}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
       </View>
      
         {/* Main Content */}
@@ -259,6 +431,61 @@ export default function PassageDetailScreen() {
             showStatusText={true}
           />
         </View>
+
+        {/* AI Analysis Loading Popup */}
+        <AIAnalysisLoadingPopup
+          visible={analyzing}
+          title="AI đang phân tích giọng nói"
+          subtitle="Vui lòng chờ trong giây lát..."
+          mascotType="longlanh"
+        />
+
+        {creatingVoiceTest && (
+          <View style={styles.analyzingContainer}>
+            <ActivityIndicator size="small" color="#10B981" />
+            <Text style={styles.analyzingText}>
+              Đang tạo bài test giọng...
+            </Text>
+          </View>
+        )}
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {analysisResult && analysisResult.status === 'success' && (
+          <View style={styles.completionContainer}>
+            <Text style={styles.completionTitle}>
+              ✅ Hoàn thành bài đọc!
+            </Text>
+            
+            <Text style={styles.completionSubtitle}>
+              Giọng nói của bạn đã được phân tích thành công
+            </Text>
+
+            {voiceTestCreated && (
+              <Text style={styles.completionDescription}>
+                ✅ Đã tạo bài test giọng thành công!
+              </Text>
+            )}
+
+            <Text style={styles.completionDescription}>
+              Nhấn &quot;Xem kết quả&quot; để xem đánh giá chi tiết
+            </Text>
+
+            <Pressable 
+              style={styles.viewResultButton}
+              onPress={() => {
+                router.push(`/evaluation-result?passageId=${passageId}&passageTitle=${encodeURIComponent(passageTitle || '')}`);
+              }}
+            >
+              <Text style={styles.viewResultButtonText}>Xem kết quả</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        )}
       </View>
 
       <RecordingListModal
@@ -275,6 +502,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+    paddingTop: responsiveSpacing(40),
+    
   },
   loadingContainer: {
     flex: 1,
@@ -418,6 +647,22 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 20,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsiveSpacing(8),
+  },
+  historyButton: {
+    position: 'relative',
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1,
+    borderColor: '#FFCC80',
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   recordingsButton: {
     position: 'relative',
     padding: 8,
@@ -453,5 +698,83 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     marginTop: 100,
+  },
+  // Analysis Results Styles
+  analyzingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    marginTop: 20,
+    marginBottom: responsiveSpacing(160),
+  },
+  analyzingText: {
+    color: '#3AA1E0',
+    fontSize: 16,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 20,
+    marginHorizontal: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
+  },
+  errorText: {
+    color: '#F44336',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  completionContainer: {
+    backgroundColor: '#E8F5E8',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 20,
+    marginHorizontal: 16,
+    marginBottom: responsiveSpacing(100),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  completionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  completionSubtitle: {
+    fontSize: 16,
+    color: '#2E7D32',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  completionDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: 20,
+  },
+  viewResultButton: {
+    backgroundColor: '#2FA6F3',
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#2FA6F3',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  viewResultButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -1,11 +1,11 @@
-import { getCategoriesByAccountAPI } from "@/app/utils/apiall";
+import { getCategoriesProgressAPI } from "@/app/utils/apiall";
 import CategoryCard from "@/components/card/categoryCard";
 import SafeAreaTabWrapper from "@/components/layout/SafeAreaTabWrapper";
 import {
-  getResponsivePadding,
-  responsiveFontSize,
-  responsiveSize,
-  responsiveSpacing
+    getResponsivePadding,
+    responsiveFontSize,
+    responsiveSize,
+    responsiveSpacing
 } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,7 +19,13 @@ interface Category {
   id: number;
   name: string;
   description: string;
-  isLock: boolean;
+  completedUsers: {
+    id: number;
+    email: string;
+    avatar: string | null;
+  }[];
+  isFinished: boolean;
+  isUnlocked: boolean;
 }
 
 export default function CategoriesScreen() {
@@ -29,24 +35,16 @@ export default function CategoriesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Function để load categories từ API bằng userId từ AsyncStorage
+  // Function để load categories từ API mới
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Lấy userId từ AsyncStorage
-      const userId = await AsyncStorage.getItem('userId');
-      if (!userId) {
-        console.log('❌ No userId found in AsyncStorage');
-        Toast.show("Không tìm thấy thông tin người dùng", { position: Toast.positions.TOP });
-        return;
-      }
+      console.log('📚 Loading categories with progress...');
       
-      console.log('📚 Loading categories for userId:', userId);
-      
-      // Gọi API để lấy categories
-      const response = await getCategoriesByAccountAPI(parseInt(userId));
-      console.log('📚 Categories API response:', response);
+      // Gọi API mới để lấy categories với trạng thái hoàn thành
+      const response = await getCategoriesProgressAPI();
+      console.log('📚 Categories Progress API response:', response);
       
       if (response && Array.isArray(response)) {
         setCategories(response);
@@ -84,7 +82,7 @@ export default function CategoriesScreen() {
     <CategoryCard
       category={item}
       onPress={() => {
-        if (!item.isLock) {
+        if (item.isUnlocked) {
           router.push(`/(exercise)/reading?categoryId=${item.id}&categoryName=${encodeURIComponent(item.name)}`);
         }
       }}
@@ -189,7 +187,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: responsiveSpacing(24),
-    marginTop: responsiveSpacing(8),
+    marginTop: responsiveSpacing(20), // Increased top margin for status bar
   },
   backButton: {
     width: responsiveSize(44),

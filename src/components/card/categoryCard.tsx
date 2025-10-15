@@ -10,7 +10,13 @@ interface CategoryCardProps {
     id: number;
     name: string;
     description: string;
-    isLock: boolean;
+  completedUsers: {
+    id: number;
+    email: string;
+    avatar: string | null;
+  }[];
+    isFinished: boolean;
+    isUnlocked: boolean;
   };
   onPress?: () => void;
   style?: ViewStyle;
@@ -30,7 +36,7 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
   }, [opacityAnim, translateYAnim]);
 
   const handlePressIn = () => {
-    if (category.isLock) return;
+    if (!category.isUnlocked) return;
     AnimationUtils.spring(scaleAnim, 0.95, {
       tension: 300,
       friction: 10,
@@ -38,7 +44,7 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
   };
 
   const handlePressOut = () => {
-    if (category.isLock) return;
+    if (!category.isUnlocked) return;
     AnimationUtils.spring(scaleAnim, 1, {
       tension: 300,
       friction: 10,
@@ -68,10 +74,10 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        disabled={category.isLock}
+        disabled={!category.isUnlocked}
         style={({ pressed }) => [
           styles.card,
-          category.isLock && styles.lockedCard,
+          !category.isUnlocked && styles.lockedCard,
           style,
         ]}
       >
@@ -85,9 +91,9 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
         <View style={styles.iconWrap}>
           <View style={styles.iconInner}>
             <Ionicons 
-              name={category.isLock ? "lock-closed" : "image-outline"} 
+              name={!category.isUnlocked ? "lock-closed" : "image-outline"} 
               size={18} 
-              color={category.isLock ? "#9CA3AF" : ENHANCED_COLORS.secondary[600]} 
+              color={!category.isUnlocked ? "#9CA3AF" : ENHANCED_COLORS.secondary[600]} 
             />
           </View>
         </View>
@@ -96,31 +102,31 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
         <View style={styles.content}>
           <Text style={[
             styles.title,
-            category.isLock && styles.lockedTitle
+            !category.isUnlocked && styles.lockedTitle
           ]}>
             {category.name}
           </Text>
           <Text style={[
             styles.desc,
-            category.isLock && styles.lockedDesc
+            !category.isUnlocked && styles.lockedDesc
           ]} numberOfLines={2}>
             {category.description}
           </Text>
 
           <View style={[
             styles.readMore,
-            category.isLock && styles.lockedReadMore
+            !category.isUnlocked && styles.lockedReadMore
           ]}>
             <Text style={[
               styles.readMoreText,
-              category.isLock && styles.lockedReadMoreText
+              !category.isUnlocked && styles.lockedReadMoreText
             ]}>
-              {category.isLock ? "Locked" : "Read more"}
+              {!category.isUnlocked ? "Locked" : "Read more"}
             </Text>
             <Ionicons 
-              name={category.isLock ? "lock-closed" : "arrow-forward"} 
+              name={!category.isUnlocked ? "lock-closed" : "arrow-forward"} 
               size={16} 
-              color={category.isLock ? "#9CA3AF" : ENHANCED_COLORS.secondary[500]} 
+              color={!category.isUnlocked ? "#9CA3AF" : ENHANCED_COLORS.secondary[500]} 
             />
           </View>
         </View>

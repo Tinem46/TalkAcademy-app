@@ -35,7 +35,7 @@ Hệ thống tùy chỉnh mascot cho phép bạn sử dụng các mascot có s�
 - **Màu bubble**: Tím (#F3E5F5 / #9C27B0)
 
 ### 6. Logo Dọc (`logoDoc`)
-- **File**: `exe logo doc-01.png`
+- **File**: `logo.png`
 - **Mô tả**: Logo ứng dụng định dạng dọc
 - **Kích thước**: 200x300
 - **Màu bubble**: Xanh cyan (#E1F5FE / #03A9F4)

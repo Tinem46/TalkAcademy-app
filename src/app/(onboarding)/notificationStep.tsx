@@ -2,6 +2,7 @@ import QuoteCard from "@/components/card/quoteCard";
 import NotificationPermissionCard from "@/components/notification/notificationPermissionCard";
 import ProgressBar from "@/components/onboarding/progressBar";
 import { useOnboarding } from "@/context/onboarding.context";
+import { responsiveSpacing } from "@/utils/responsive";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
@@ -53,9 +54,9 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingTop: 12,
-    paddingHorizontal: 16,
+    paddingTop: responsiveSpacing(70),
+    paddingHorizontal: responsiveSpacing(16),
   },
-  header: { marginBottom: 40, paddingHorizontal: 8 },
+  header: { marginBottom: responsiveSpacing(40), paddingHorizontal: responsiveSpacing(8) },
 });
 export default NotificationStep;

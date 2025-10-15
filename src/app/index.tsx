@@ -54,58 +54,20 @@ const RootPage = () => {
                 console.log('✅ User has completed onboarding (found in both accounts and surveys), going to home');
                 router.replace("/(tabs)");
               } else {
-                // Chưa hoàn thành onboarding -> kiểm tra xem đây có phải là app restart không
-                const isAppRestart = await AsyncStorage.getItem('app_restart_flag');
-                
-                if (isAppRestart === 'true') {
-                  // Đây là app restart -> xóa session và về welcome
-                  console.log('🔄 App restart detected - user not completed onboarding, clearing session and going to welcome');
-                  await AsyncStorage.removeItem("access_token");
-                  await AsyncStorage.removeItem("username");
-                  await AsyncStorage.removeItem("userId");
-                  await AsyncStorage.removeItem("accountId");
-                  await AsyncStorage.removeItem('app_restart_flag');
-                  router.replace("/(auth)/welcome");
-                } else {
-                  // Đây là lần đầu tiên -> chuyển đến onboarding
-                  console.log('📱 First time login - user not completed onboarding, going to onboarding');
-                  router.replace("/(onboarding)/intro");
-                }
+                // Chưa hoàn thành onboarding -> chuyển đến onboarding
+                console.log('📱 User logged in but not completed onboarding, going to onboarding');
+                router.replace("/(onboarding)/intro");
               }
             } catch (error) {
               console.log('⚠️ Error checking onboarding status:', error);
-              // Khi có lỗi, cũng kiểm tra app restart
-              const isAppRestart = await AsyncStorage.getItem('app_restart_flag');
-              
-              if (isAppRestart === 'true') {
-                console.log('🔄 App restart with error - clearing session and going to welcome');
-                await AsyncStorage.removeItem("access_token");
-                await AsyncStorage.removeItem("username");
-                await AsyncStorage.removeItem("userId");
-                await AsyncStorage.removeItem("accountId");
-                await AsyncStorage.removeItem('app_restart_flag');
-                router.replace("/(auth)/welcome");
-              } else {
-                console.log('📱 First time login with error - going to onboarding');
-                router.replace("/(onboarding)/intro");
-              }
-            }
-          } else {
-            // Không có username -> kiểm tra app restart
-            const isAppRestart = await AsyncStorage.getItem('app_restart_flag');
-            
-            if (isAppRestart === 'true') {
-              console.log('🔄 App restart - no username, clearing session and going to welcome');
-              await AsyncStorage.removeItem("access_token");
-              await AsyncStorage.removeItem("username");
-              await AsyncStorage.removeItem("userId");
-              await AsyncStorage.removeItem("accountId");
-              await AsyncStorage.removeItem('app_restart_flag');
-              router.replace("/(auth)/welcome");
-            } else {
-              console.log('📱 First time login - no username, going to onboarding');
+              // Khi có lỗi, chuyển đến onboarding để user có thể hoàn thành
+              console.log('📱 Error occurred, going to onboarding to complete setup');
               router.replace("/(onboarding)/intro");
             }
+          } else {
+            // Không có username -> chuyển đến onboarding
+            console.log('📱 No username found, going to onboarding');
+            router.replace("/(onboarding)/intro");
           }
           
           await SplashScreen.hideAsync();

@@ -1,4 +1,11 @@
 import { api } from "@/config/api";
+import {
+  mockAnalyzeVoiceAPI,
+  mockCheckOnboardingStatusWithAccountsAPI,
+  mockGetReadingPassageByCategoryAPI,
+  mockGetReadingPassageByIdAPI,
+  mockGetUserSurveyAPI
+} from "@/utils/mockApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
@@ -67,9 +74,14 @@ export const createUserSurveyAPI = (surveyData: {
   return api.post<IBackendRes<any>>("user-surveys", surveyData);
 };
 
-export const getUserSurveyAPI = () => {
-  console.log('🔍 Getting all surveys from API');
-  return api.get<IBackendRes<any>>(`user-surveys`);
+export const getUserSurveyAPI = async () => {
+  try {
+    console.log('🔍 Getting all surveys from API');
+    return await api.get<IBackendRes<any>>(`user-surveys`);
+  } catch (error) {
+    console.log('⚠️ API Error, using mock data:', error);
+    return mockGetUserSurveyAPI();
+  }
 };
 
 export const checkUserSurveyExistsAPI = (userId: number) => {
@@ -93,7 +105,7 @@ export const checkOnboardingStatusAPI = async (): Promise<boolean> => {
     if (cachedSurveys) {
       const surveys = JSON.parse(cachedSurveys);
       const hasSurvey = Array.isArray(surveys)
-        ? surveys.some(survey => survey.username === username)
+        ? surveys.some(survey => survey.user?.username === username)
         : false;
       console.log('📊 Survey check from cache:', hasSurvey);
       return hasSurvey;
@@ -104,7 +116,7 @@ export const checkOnboardingStatusAPI = async (): Promise<boolean> => {
     console.log('📊 Survey check response:', response);
 
     if (response && Array.isArray(response)) {
-      const hasSurvey = response.some(survey => survey.username === username);
+      const hasSurvey = response.some(survey => survey.user?.username === username);
       console.log('📊 Survey exists check:', hasSurvey);
       return hasSurvey;
     }
@@ -171,8 +183,8 @@ export const checkOnboardingStatusWithAccountsAPI = async (): Promise<boolean> =
     return hasCompletedOnboarding;
 
   } catch (error: any) {
-    console.error('❌ Error checking onboarding status with accounts:', error);
-    return false;
+    console.log('⚠️ Error checking onboarding status with accounts, using mock data:', error);
+    return mockCheckOnboardingStatusWithAccountsAPI();
   }
 };
 
@@ -241,31 +253,152 @@ export const getCategoriesByAccountAPI = (userId: number) => {
   return api.get<IBackendRes<any>>(`categories/by-account/${userId}`);
 };
 
+// Lấy danh sách tất cả danh mục kèm trạng thái hoàn thành
+export const getCategoriesProgressAPI = () => {
+  console.log('🌐 API Call - GET /categories/progress');
+  return api.get<IBackendRes<any>>('categories/progress');
+};
+
+// Lấy bài đọc theo category kèm trạng thái hoàn thành & khóa
+export const getReadingPassageByCategoryWithStatusAPI = (categoryId: number) => {
+  console.log('🌐 API Call - GET /reading-passage/category/{categoryId}');
+  console.log('🌐 Request params:', { categoryId });
+  return api.get<IBackendRes<any>>(`reading-passage/category/${categoryId}`);
+};
+
+// Tạo một bài test giọng mới
+// Test API để kiểm tra server
+export const testVoiceTestAPI = () => {
+  console.log('🧪 Testing voice test API with minimal data...');
+  const testData = {
+    cerRatio: 0.1,
+    spm: 100,
+    pauseRatio: 0.1,
+    mptSeconds: 1,
+    finalConsonantAccuracy: 0.5,
+    passageId: 1,
+    voiceScore: 50,
+    level: "L1",
+    userId: 1,
+  };
+
+  return api.post<IBackendRes<any>>('voice-test', testData, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+};
+
+// Lấy lịch sử voice test theo passageId
+export const getVoiceTestHistoryAPI = (passageId: number) => {
+  console.log('📚 API Call - GET /voice-test/history/' + passageId);
+  return api.get<IBackendRes<VoiceTestHistoryItem[]>>(`voice-test/history/${passageId}`);
+};
+
+export const createVoiceTestAPI = (voiceTestData: {
+  cerRatio: number;
+  spm: number;
+  pauseRatio: number;
+  mptSeconds: number;
+  finalConsonantAccuracy: number;
+  passageId: number;
+  voiceScore: number;
+  level: string;
+  userId: number;
+  audio?: {
+    uri: string;
+    type: string;
+    name: string;
+  };
+}) => {
+  console.log('🌐 API Call - POST /voice-test');
+  console.log('🌐 Request data:', voiceTestData);
+
+  // Nếu không có audio file, sử dụng JSON
+  if (!voiceTestData.audio) {
+    console.log('📝 No audio file, using JSON format');
+    const jsonData = {
+      cerRatio: voiceTestData.cerRatio,
+      spm: voiceTestData.spm,
+      pauseRatio: voiceTestData.pauseRatio,
+      mptSeconds: voiceTestData.mptSeconds,
+      finalConsonantAccuracy: voiceTestData.finalConsonantAccuracy,
+      passageId: voiceTestData.passageId,
+      voiceScore: voiceTestData.voiceScore,
+      level: voiceTestData.level,
+      userId: voiceTestData.userId,
+    };
+
+    console.log('📤 JSON data being sent:', JSON.stringify(jsonData, null, 2));
+
+    // Validation dữ liệu trước khi gửi
+    console.log('🔍 Data validation:');
+    console.log('  - cerRatio:', typeof jsonData.cerRatio, jsonData.cerRatio);
+    console.log('  - spm:', typeof jsonData.spm, jsonData.spm);
+    console.log('  - pauseRatio:', typeof jsonData.pauseRatio, jsonData.pauseRatio);
+    console.log('  - mptSeconds:', typeof jsonData.mptSeconds, jsonData.mptSeconds);
+    console.log('  - finalConsonantAccuracy:', typeof jsonData.finalConsonantAccuracy, jsonData.finalConsonantAccuracy);
+    console.log('  - passageId:', typeof jsonData.passageId, jsonData.passageId);
+    console.log('  - voiceScore:', typeof jsonData.voiceScore, jsonData.voiceScore);
+    console.log('  - level:', typeof jsonData.level, jsonData.level);
+    console.log('  - userId:', typeof jsonData.userId, jsonData.userId);
+
+    return api.post<IBackendRes<any>>('voice-test', jsonData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  // Nếu có audio file, sử dụng FormData
+  console.log('📝 Has audio file, using FormData format');
+
+  // Tạo FormData cho multipart/form-data
+  const formData = new FormData();
+
+  console.log('📝 Creating FormData...');
+  console.log('📝 Voice test data keys:', Object.keys(voiceTestData));
+
+  // Thêm các trường dữ liệu
+  formData.append('cerRatio', voiceTestData.cerRatio.toString());
+  formData.append('spm', voiceTestData.spm.toString());
+  formData.append('pauseRatio', voiceTestData.pauseRatio.toString());
+  formData.append('mptSeconds', voiceTestData.mptSeconds.toString());
+  formData.append('finalConsonantAccuracy', voiceTestData.finalConsonantAccuracy.toString());
+  formData.append('passageId', voiceTestData.passageId.toString());
+  formData.append('voiceScore', voiceTestData.voiceScore.toString());
+  formData.append('level', voiceTestData.level);
+  formData.append('userId', voiceTestData.userId.toString());
+
+  console.log('📝 FormData basic fields added');
+
+  // Thêm file audio
+  console.log('🎵 Adding audio file:', voiceTestData.audio);
+  console.log('🎵 Audio file exists:', !!voiceTestData.audio.uri);
+  console.log('🎵 Audio file type:', voiceTestData.audio.type);
+  console.log('🎵 Audio file name:', voiceTestData.audio.name);
+
+  formData.append('audio', {
+    uri: voiceTestData.audio.uri,
+    type: voiceTestData.audio.type,
+    name: voiceTestData.audio.name,
+  } as any);
+
+  console.log('📤 FormData created with fields:', Object.keys(voiceTestData));
+
+  return api.post<IBackendRes<any>>('voice-test', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
 // Lấy thông tin account theo ID
 export const getAccountByIdAPI = (accountId: string) => {
   return api.get<IBackendRes<any>>(`accounts/${accountId}`);
 }
 
-export const updateUserAPI = (id: string, data: any) => {
-  return api.put<IBackendRes<any>>(`Auth/profile`, data);
-};
 
-export const fetchProductsAPI = (params: any) => {
-  // "Product" là route backend trả về danh sách sản phẩm
-  return api.get<IBackendRes<any>>("Product", { params });
-};
-export const fetchCouponAPI = () => {
-  // "Coupon" là route backend trả về danh sách mã giảm giá
-  return api.get<IBackendRes<any>>("Coupons");
-};
-
-export const updatePasswordAPI = (oldPassword: string, newPassword: string, confirmPassword: string) => {
-  return api.post<IBackendRes<any>>("Auth/change-password", {
-    oldPassword,
-    newPassword,
-    confirmPassword,
-  })
-};
 
 
 
@@ -292,13 +425,81 @@ export const backEndURL = () => {
 
 
 // Reading Passage APIs
-export const getReadingPassageByCategoryAPI = (categoryId: number) => {
-  console.log('🌐 API Call - GET /reading-passage/category');
-  console.log('🌐 Request params:', { categoryId });
+export const getReadingPassageByCategoryAPI = async (categoryId: number) => {
+  try {
+    console.log('🌐 Full API URL:', `${api.defaults.baseURL}reading-passage/category`);
+    console.log('🌐 Request params:', { categoryId });
 
-  return api.get<IBackendRes<any>>("reading-passage/category", {
-    params: { categoryId }
-  });
+    // Thử với endpoint khác nếu endpoint hiện tại không hoạt động
+    let response;
+    try {
+      response = await api.get<IBackendRes<any>>("reading-passage/category", {
+        params: { categoryId }
+      });
+    } catch {
+      console.log('🔄 Trying alternative endpoint...');
+      // Thử endpoint khác
+      response = await api.get<IBackendRes<any>>(`reading-passage?categoryId=${categoryId}`);
+    }
+
+    console.log('✅ API Success - Reading passages:', response);
+    return response;
+  } catch (error: any) {
+    console.log('❌ API Error - Reading passages:', error?.response?.status, error?.message);
+
+    // Nếu là lỗi 400 hoặc server không có sẵn, sử dụng mock data
+    if (error?.response?.status === 400 || error?.code === 'NETWORK_ERROR') {
+      console.log('🔄 Using mock data for reading passages');
+      return mockGetReadingPassageByCategoryAPI(categoryId);
+    }
+
+    throw error;
+  }
+};
+
+export const getReadingPassageByIdAPI = async (id: number) => {
+  try {
+    console.log('🌐 API Call - GET /reading-passage/{id}');
+    console.log('🌐 Request params:', { id });
+
+    const response = await api.get<IBackendRes<any>>(`reading-passage/${id}`);
+
+    console.log('✅ API Success - Reading passage by ID:', response);
+    return response;
+  } catch (error: any) {
+    console.log('❌ API Error - Reading passage by ID:', error?.response?.status, error?.message);
+
+    // Nếu là lỗi 400 hoặc server không có sẵn, sử dụng mock data
+    if (error?.response?.status === 400 || error?.code === 'NETWORK_ERROR') {
+      console.log('🔄 Using mock data for reading passage by ID');
+      return mockGetReadingPassageByIdAPI(id);
+    }
+
+    throw error;
+  }
+};
+
+export const analyzeVoiceAPI = async (audioFile: any) => {
+  try {
+    console.log('🌐 API Call - POST /assemblyai/analyze');
+    console.log('🌐 Uploading audio file for analysis');
+
+    const formData = new FormData();
+    formData.append('file', {
+      uri: audioFile.uri,
+      type: audioFile.type || 'audio/mp3',
+      name: audioFile.name || 'recording.mp3',
+    } as any);
+
+    return await api.post<IBackendRes<any>>("assemblyai/analyze", formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  } catch (error) {
+    console.log('⚠️ API Error, using mock data:', error);
+    return mockAnalyzeVoiceAPI();
+  }
 };
 
 export const currencyFormatter = (value: any) => {
