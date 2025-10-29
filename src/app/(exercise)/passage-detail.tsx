@@ -1,7 +1,13 @@
-import { analyzeVoiceAPI, createVoiceTestAPI, getReadingPassageByIdAPI, testVoiceTestAPI } from "@/app/utils/apiall";
+import {
+  analyzeVoiceAPI,
+  createVoiceTestAPI,
+  getReadingPassageByIdAPI,
+  testVoiceTestAPI,
+} from "@/app/utils/apiall";
 import { useMascotManager } from "@/components/mascotWithBubble/MascotManager";
 import MascotWithBubble from "@/components/mascotWithBubble/mascotWithBubble";
 import { AIAnalysisLoadingPopup, RecordingListModal } from "@/components/modal";
+import CustomScrollView from "@/components/refresh/CustomScrollView";
 import VoiceRecorder from "@/components/voiceRecorder/VoiceRecorder";
 import { useRecordings } from "@/hooks/useRecordings";
 import { responsiveSize, responsiveSpacing } from "@/utils/responsive";
@@ -9,7 +15,14 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import Toast from "react-native-root-toast";
 
 // Interface cho Reading Passage
@@ -31,10 +44,14 @@ export default function PassageDetailScreen() {
   const passageId = params.id as string;
   const passageTitle = params.title as string;
   const categoryId = params.categoryId as string;
+  const assessmentId = params.assessmentId as string;
+  const assessmentTitle = params.assessmentTitle as string;
+  const assessmentLevel = params.assessmentLevel as string;
+  const isAssessment = params.isAssessment === "true";
   const { getMascotByType } = useMascotManager();
   const { recordings, addRecording, deleteRecording } = useRecordings();
   const { width: screenWidth } = useWindowDimensions();
-  
+
   const [passage, setPassage] = useState<ReadingPassage | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,37 +62,43 @@ export default function PassageDetailScreen() {
   const [creatingVoiceTest, setCreatingVoiceTest] = useState(false);
   const [voiceTestCreated, setVoiceTestCreated] = useState(false);
   const [currentAudioUri, setCurrentAudioUri] = useState<string | null>(null);
-  
-  console.log('🔍 PassageDetailScreen params:', params);
-  console.log('🔍 passageId:', passageId);
-  console.log('🔍 passageTitle:', passageTitle);
-  console.log('🔍 categoryId:', categoryId);
+
+  console.log("🔍 PassageDetailScreen params:", params);
+  console.log("🔍 passageId:", passageId);
+  console.log("🔍 passageTitle:", passageTitle);
+  console.log("🔍 categoryId:", categoryId);
+  console.log("🔍 assessmentId:", assessmentId);
+  console.log("🔍 assessmentTitle:", assessmentTitle);
+  console.log("🔍 assessmentLevel:", assessmentLevel);
+  console.log("🔍 isAssessment:", isAssessment);
 
   const fetchPassage = useCallback(async () => {
     if (!passageId) {
-      console.log('❌ No passageId provided');
+      console.log("❌ No passageId provided");
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
-      console.log('📚 Fetching reading passage by ID:', passageId);
-      
+      console.log("📚 Fetching reading passage by ID:", passageId);
+
       const response = await getReadingPassageByIdAPI(parseInt(passageId));
-      console.log('📚 Reading passage response:', response);
-      
+      console.log("📚 Reading passage response:", response);
+
       if (response && (response as any).id) {
         setPassage(response as any as ReadingPassage);
-        console.log('📚 Found passage:', response);
+        console.log("📚 Found passage:", response);
       } else {
-        console.log('❌ Passage not found with id:', passageId);
-        Toast.show("Không tìm thấy bài đọc!", { position: Toast.positions.TOP });
+        console.log("❌ Passage not found with id:", passageId);
+        Toast.show("Không tìm thấy bài đọc!", {
+          position: Toast.positions.TOP,
+        });
       }
     } catch (error: any) {
-      console.error('❌ Error fetching passage:', error);
-      Toast.show("Không thể tải bài đọc. Vui lòng thử lại!", { 
-        position: Toast.positions.TOP 
+      console.error("❌ Error fetching passage:", error);
+      Toast.show("Không thể tải bài đọc. Vui lòng thử lại!", {
+        position: Toast.positions.TOP,
       });
     } finally {
       setLoading(false);
@@ -87,7 +110,7 @@ export default function PassageDetailScreen() {
     try {
       await fetchPassage();
     } catch (error) {
-      console.error('Error refreshing passage:', error);
+      console.error("Error refreshing passage:", error);
     } finally {
       setRefreshing(false);
     }
@@ -103,24 +126,33 @@ export default function PassageDetailScreen() {
   const isSmallScreen = screenWidth < 375;
   const isMediumScreen = screenWidth >= 375 && screenWidth < 768;
   const isTablet = screenWidth >= 768;
-  
-  const responsiveMicSize = isSmallScreen ? 35 : isMediumScreen ? 40 : isTablet ? 50 : 45;
+
+  const responsiveMicSize = isSmallScreen
+    ? 35
+    : isMediumScreen
+    ? 40
+    : isTablet
+    ? 50
+    : 45;
 
   const handleRecordingStart = () => {
-    console.log('Recording started');
+    console.log("Recording started");
   };
 
   const handleRecordingStop = async (uri: string) => {
-    console.log('🎤 Recording stopped, URI:', uri);
-    console.log('🎤 Setting currentAudioUri to:', uri);
+    console.log("🎤 Recording stopped, URI:", uri);
+    console.log("🎤 Setting currentAudioUri to:", uri);
     setCurrentAudioUri(uri); // Lưu audio URI để sử dụng trong createVoiceTest
-    console.log('🎤 Current audio URI set, proceeding with analysis...');
-    
+    console.log("🎤 Current audio URI set, proceeding with analysis...");
+
     // Verify URI is set
     setTimeout(() => {
-      console.log('🎤 Verifying currentAudioUri after setState:', currentAudioUri);
+      console.log(
+        "🎤 Verifying currentAudioUri after setState:",
+        currentAudioUri
+      );
     }, 100);
-    
+
     await addRecording(uri);
     await analyzeRecording(uri);
   };
@@ -129,27 +161,36 @@ export default function PassageDetailScreen() {
     try {
       setAnalyzing(true);
       setError(null);
-      console.log('🎤 Analyzing recording:', audioUri);
-      
+      console.log("🎤 Analyzing recording:", audioUri);
+
       const audioFile = {
         uri: audioUri,
-        type: 'audio/mp3',
+        type: "audio/mp3",
         name: `recording_${Date.now()}.mp3`,
       };
-      
+
       const response = await analyzeVoiceAPI(audioFile);
-      console.log('🎤 Analysis response:', response);
-      
+      console.log("🎤 Analysis response:", response);
+
       if (response) {
         setAnalysisResult(response as any);
-        console.log('🎤 Analysis completed:', (response as any).metrics?.voiceScore);
-        
+        console.log(
+          "🎤 Analysis completed:",
+          (response as any).metrics?.voiceScore
+        );
+
         // Lưu kết quả phân tích vào AsyncStorage
         try {
-          await AsyncStorage.setItem('voiceAnalysisResult', JSON.stringify(response));
-          console.log('💾 Voice analysis result saved to storage');
+          await AsyncStorage.setItem(
+            "voiceAnalysisResult",
+            JSON.stringify(response)
+          );
+          console.log("💾 Voice analysis result saved to storage");
         } catch (storageError) {
-          console.warn('⚠️ Failed to save analysis result to storage:', storageError);
+          console.warn(
+            "⚠️ Failed to save analysis result to storage:",
+            storageError
+          );
         }
 
         // Tạo voice test sau khi phân tích thành công - truyền audioUri trực tiếp
@@ -157,12 +198,16 @@ export default function PassageDetailScreen() {
 
         // Tự động chuyển sang trang evaluation-result sau khi phân tích xong
         setTimeout(() => {
-          router.push(`/evaluation-result?passageId=${passageId}&passageTitle=${encodeURIComponent(passageTitle || '')}`);
+          router.push(
+            `/evaluation-result?passageId=${passageId}&passageTitle=${encodeURIComponent(
+              passageTitle || ""
+            )}`
+          );
         }, 1000); // Delay 1 giây để user thấy kết quả
       }
     } catch (err) {
-      console.error('❌ Error analyzing recording:', err);
-      setError('Không thể phân tích giọng nói');
+      console.error("❌ Error analyzing recording:", err);
+      setError("Không thể phân tích giọng nói");
     } finally {
       setAnalyzing(false);
     }
@@ -171,15 +216,17 @@ export default function PassageDetailScreen() {
   const createVoiceTest = async (analysisResult: any, audioUri?: string) => {
     try {
       setCreatingVoiceTest(true);
-      console.log('🎯 Creating voice test...');
-      console.log('🎯 Audio URI parameter:', audioUri);
-      console.log('🎯 Current audio URI state:', currentAudioUri);
-      
+      console.log("🎯 Creating voice test...");
+      console.log("🎯 Audio URI parameter:", audioUri);
+      console.log("🎯 Current audio URI state:", currentAudioUri);
+
       // Lấy userId từ AsyncStorage
-      const userId = await AsyncStorage.getItem('userId');
+      const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
-        console.error('❌ No userId found for voice test');
-        Toast.show("Không tìm thấy thông tin người dùng!", { position: Toast.positions.TOP });
+        console.error("❌ No userId found for voice test");
+        Toast.show("Không tìm thấy thông tin người dùng!", {
+          position: Toast.positions.TOP,
+        });
         return;
       }
 
@@ -189,40 +236,45 @@ export default function PassageDetailScreen() {
         spm: analysisResult.metrics?.spm || 150,
         pauseRatio: analysisResult.metrics?.pauseRatio || 0.28,
         mptSeconds: analysisResult.metrics?.mptSeconds || 9,
-        finalConsonantAccuracy: analysisResult.metrics?.finalConsonantAccuracy ?? 0.67, // Sử dụng ?? để handle null
+        finalConsonantAccuracy:
+          analysisResult.metrics?.finalConsonantAccuracy ?? 0.67, // Sử dụng ?? để handle null
         passageId: parseInt(passageId),
         voiceScore: analysisResult.metrics?.voiceScore || 85,
         level: "L1", // Sử dụng format cố định L1 thay vì BEGINNER
         userId: parseInt(userId),
         // Thêm file audio nếu có - ưu tiên audioUri parameter
-        audio: (audioUri || currentAudioUri) ? {
-          uri: (audioUri || currentAudioUri)!,
-          type: 'audio/mp3',
-          name: `recording_${Date.now()}.mp3`,
-        } : undefined
+        audio:
+          audioUri || currentAudioUri
+            ? {
+                uri: (audioUri || currentAudioUri)!,
+                type: "audio/mp3",
+                name: `recording_${Date.now()}.mp3`,
+              }
+            : undefined,
       };
 
-      console.log('🎯 Voice test data:', voiceTestData);
-      
+      console.log("🎯 Voice test data:", voiceTestData);
+
       // Test API trước
       try {
-        console.log('🧪 Testing API with minimal data...');
+        console.log("🧪 Testing API with minimal data...");
         await testVoiceTestAPI();
-        console.log('✅ Test API successful');
+        console.log("✅ Test API successful");
       } catch (testError) {
-        console.error('❌ Test API failed:', testError);
+        console.error("❌ Test API failed:", testError);
       }
-      
+
       // Gọi API tạo voice test với multipart/form-data
       const response = await createVoiceTestAPI(voiceTestData);
-      console.log('🎯 Voice test created:', response);
-      
+      console.log("🎯 Voice test created:", response);
+
       setVoiceTestCreated(true);
-      Toast.show("Đã tạo bài test giọng thành công!", { position: Toast.positions.TOP });
-      
+      Toast.show("Đã tạo bài test giọng thành công!", {
+        position: Toast.positions.TOP,
+      });
     } catch (error: any) {
-      console.error('❌ Error creating voice test:', error);
-      console.error('❌ Error details:', {
+      console.error("❌ Error creating voice test:", error);
+      console.error("❌ Error details:", {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -231,41 +283,49 @@ export default function PassageDetailScreen() {
           url: error.config?.url,
           method: error.config?.method,
           headers: error.config?.headers,
-        }
+        },
       });
-      
+
       // Log chi tiết server response
       if (error.response?.data) {
-        console.error('❌ Server response data:', JSON.stringify(error.response.data, null, 2));
+        console.error(
+          "❌ Server response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
-      
+
       // Thử lại không có file audio nếu có lỗi
       if (audioUri || currentAudioUri) {
-        console.log('🔄 Retrying without audio file...');
+        console.log("🔄 Retrying without audio file...");
         try {
           const retryData = {
             cerRatio: analysisResult.metrics?.cerRatio || 0.12,
             spm: analysisResult.metrics?.spm || 150,
             pauseRatio: analysisResult.metrics?.pauseRatio || 0.28,
             mptSeconds: analysisResult.metrics?.mptSeconds || 9,
-            finalConsonantAccuracy: analysisResult.metrics?.finalConsonantAccuracy ?? 0.67, // Sử dụng ?? để handle null
+            finalConsonantAccuracy:
+              analysisResult.metrics?.finalConsonantAccuracy ?? 0.67, // Sử dụng ?? để handle null
             passageId: parseInt(passageId),
             voiceScore: analysisResult.metrics?.voiceScore || 85,
             level: "L1", // Sử dụng format cố định L1
-            userId: parseInt(await AsyncStorage.getItem('userId') || '0'),
-            audio: undefined
+            userId: parseInt((await AsyncStorage.getItem("userId")) || "0"),
+            audio: undefined,
           };
           const retryResponse = await createVoiceTestAPI(retryData);
-          console.log('🎯 Voice test created (without audio):', retryResponse);
+          console.log("🎯 Voice test created (without audio):", retryResponse);
           setVoiceTestCreated(true);
-          Toast.show("Đã tạo bài test giọng thành công (không có audio)!", { position: Toast.positions.TOP });
+          Toast.show("Đã tạo bài test giọng thành công (không có audio)!", {
+            position: Toast.positions.TOP,
+          });
           return;
         } catch (retryError) {
-          console.error('❌ Retry also failed:', retryError);
+          console.error("❌ Retry also failed:", retryError);
         }
       }
-      
-      Toast.show("Không thể tạo bài test giọng. Vui lòng thử lại!", { position: Toast.positions.TOP });
+
+      Toast.show("Không thể tạo bài test giọng. Vui lòng thử lại!", {
+        position: Toast.positions.TOP,
+      });
     } finally {
       setCreatingVoiceTest(false);
     }
@@ -293,10 +353,7 @@ export default function PassageDetailScreen() {
       <View style={styles.loadingContainer}>
         <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
         <Text style={styles.loadingText}>Không tìm thấy bài đọc</Text>
-        <Pressable 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Quay lại</Text>
         </Pressable>
       </View>
@@ -304,36 +361,47 @@ export default function PassageDetailScreen() {
   }
 
   return (
-    <ScrollView
+    <CustomScrollView
       style={styles.container}
       contentContainerStyle={{ paddingBottom: responsiveSpacing(120) }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={['#2AA0FF']} // Android
-          tintColor="#2AA0FF" // iOS
-        />
-      }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     >
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={responsiveSize(24)} color="#2FA6F3" />
+          <Ionicons
+            name="arrow-back"
+            size={responsiveSize(24)}
+            color="#2FA6F3"
+          />
         </Pressable>
-        <Text style={styles.headerTitle}>{passage.title}</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>{passage.title}</Text>
+          {isAssessment && assessmentTitle && (
+            <Text style={styles.assessmentSubtitle}>
+              {decodeURIComponent(assessmentTitle)} • {assessmentLevel}
+            </Text>
+          )}
+        </View>
         <View style={styles.headerButtons}>
           <Pressable
-            onPress={() => router.push(`/voice-test-history?passageId=${passageId}&passageTitle=${encodeURIComponent(passageTitle || '')}`)}
+            onPress={() =>
+              router.push(
+                `/voice-test-history?passageId=${passageId}&passageTitle=${encodeURIComponent(
+                  passageTitle || ""
+                )}`
+              )
+            }
             style={({ pressed }) => [
               styles.historyButton,
               pressed && { opacity: 0.7 },
             ]}
           >
-            <Ionicons 
-              name="time-outline" 
-              size={isTablet ? 28 : 24} 
-              color="#FF9800" 
+            <Ionicons
+              name="time-outline"
+              size={isTablet ? 28 : 24}
+              color="#FF9800"
             />
           </Pressable>
           <Pressable
@@ -343,11 +411,7 @@ export default function PassageDetailScreen() {
               pressed && { opacity: 0.7 },
             ]}
           >
-            <Ionicons 
-              name="list" 
-              size={isTablet ? 28 : 24} 
-              color="#3AA1E0" 
-            />
+            <Ionicons name="list" size={isTablet ? 28 : 24} color="#3AA1E0" />
             {recordings.length > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{recordings.length}</Text>
@@ -356,49 +420,49 @@ export default function PassageDetailScreen() {
           </Pressable>
         </View>
       </View>
-     
-        {/* Main Content */}
-        <View style={styles.content}>
-{/*     
+
+      {/* Main Content */}
+      <View style={styles.content}>
+        {/*     
         <View style={styles.wordSection}>
           <Text style={styles.mainWord}>{passage.title}</Text>
         </View> */}
 
-<View style={styles.mascotContainer}>
+        <View style={styles.mascotContainer}>
           <MascotWithBubble
             message="Hãy đọc kỹ bài này và chú ý đến cách phát âm nhé! Sau đó bấm vào micro để luyện tập phát âm! 🎯"
-            mascotSource={getMascotByType('longlanh').source}
+            mascotSource={getMascotByType("longlanh").source}
             containerStyle={StyleSheet.absoluteFill}
             mascotWidth={responsiveSize(130)}
             mascotHeight={responsiveSize(130)}
-            mascotPosition={{ 
-              left: responsiveSize(-15), 
-              bottom: responsiveSize(170) 
+            mascotPosition={{
+              left: responsiveSize(-15),
+              bottom: responsiveSize(170),
             }}
-            bubblePosition={{ 
-              left: responsiveSize(100), 
-              top: responsiveSize(-120) 
+            bubblePosition={{
+              left: responsiveSize(100),
+              top: responsiveSize(-120),
             }}
             bubbleStyle={{
-              height: responsiveSize(130), 
-              width: responsiveSize(240)
+              height: responsiveSize(130),
+              width: responsiveSize(240),
             }}
-            bgColor={getMascotByType('longlanh').recommendedBubbleColor?.bgColor}
-            borderColor={getMascotByType('longlanh').recommendedBubbleColor?.borderColor}
+            bgColor={
+              getMascotByType("longlanh").recommendedBubbleColor?.bgColor
+            }
+            borderColor={
+              getMascotByType("longlanh").recommendedBubbleColor?.borderColor
+            }
             responsive={true}
           />
         </View>
 
         {/* Reading Passage Content */}
         <View style={styles.passageContainer}>
-          <Text style={styles.passageText}>
-            {passage.content}
-          </Text>
+          <Text style={styles.passageText}>{passage.content}</Text>
         </View>
 
         {/* Mascot Reading Guide - giống introLayout */}
-
-        
 
         {/* Pronunciation Guide */}
         {/* <View style={styles.pronunciationBox}>
@@ -443,9 +507,7 @@ export default function PassageDetailScreen() {
         {creatingVoiceTest && (
           <View style={styles.analyzingContainer}>
             <ActivityIndicator size="small" color="#10B981" />
-            <Text style={styles.analyzingText}>
-              Đang tạo bài test giọng...
-            </Text>
+            <Text style={styles.analyzingText}>Đang tạo bài test giọng...</Text>
           </View>
         )}
 
@@ -455,12 +517,10 @@ export default function PassageDetailScreen() {
           </View>
         )}
 
-        {analysisResult && analysisResult.status === 'success' && (
+        {analysisResult && analysisResult.status === "success" && (
           <View style={styles.completionContainer}>
-            <Text style={styles.completionTitle}>
-              ✅ Hoàn thành bài đọc!
-            </Text>
-            
+            <Text style={styles.completionTitle}>✅ Hoàn thành bài đọc!</Text>
+
             <Text style={styles.completionSubtitle}>
               Giọng nói của bạn đã được phân tích thành công
             </Text>
@@ -475,10 +535,14 @@ export default function PassageDetailScreen() {
               Nhấn &quot;Xem kết quả&quot; để xem đánh giá chi tiết
             </Text>
 
-            <Pressable 
+            <Pressable
               style={styles.viewResultButton}
               onPress={() => {
-                router.push(`/evaluation-result?passageId=${passageId}&passageTitle=${encodeURIComponent(passageTitle || '')}`);
+                router.push(
+                  `/evaluation-result?passageId=${passageId}&passageTitle=${encodeURIComponent(
+                    passageTitle || ""
+                  )}`
+                );
               }}
             >
               <Text style={styles.viewResultButtonText}>Xem kết quả</Text>
@@ -494,7 +558,7 @@ export default function PassageDetailScreen() {
         recordings={recordings}
         onDeleteRecording={deleteRecording}
       />
-    </ScrollView>
+    </CustomScrollView>
   );
 }
 
@@ -503,20 +567,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     paddingTop: responsiveSpacing(40),
-    
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
   backButtonText: {
     fontSize: 16,
@@ -541,16 +604,24 @@ const styles = StyleSheet.create({
     width: responsiveSize(44),
     height: responsiveSize(44),
     borderRadius: responsiveSize(22),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: responsiveSpacing(12),
+  },
+  headerContent: {
+    flex: 1,
+    marginRight: 16,
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: "700",
     color: "#123E2D",
-    flex: 1,
-    marginRight: 16,
+  },
+  assessmentSubtitle: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#2FA6F3",
+    marginTop: 4,
   },
   content: {
     flex: 1,
@@ -648,133 +719,133 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: responsiveSpacing(8),
   },
   historyButton: {
-    position: 'relative',
+    position: "relative",
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: "#FFF3E0",
     borderWidth: 1,
-    borderColor: '#FFCC80',
+    borderColor: "#FFCC80",
     minWidth: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   recordingsButton: {
-    position: 'relative',
+    position: "relative",
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#F0F8FF',
+    backgroundColor: "#F0F8FF",
     borderWidth: 1,
-    borderColor: '#B3D9FF',
+    borderColor: "#B3D9FF",
     minWidth: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   badge: {
-    position: 'absolute',
+    position: "absolute",
     top: -2,
     right: -2,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
   badgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   mascotContainer: {
     flex: 1,
-    position: 'relative',
-    width: '100%',
+    position: "relative",
+    width: "100%",
     height: 180,
     marginTop: 100,
   },
   // Analysis Results Styles
   analyzingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 16,
     marginTop: 20,
     marginBottom: responsiveSpacing(160),
   },
   analyzingText: {
-    color: '#3AA1E0',
+    color: "#3AA1E0",
     fontSize: 16,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorContainer: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: "#FFEBEE",
     borderRadius: 12,
     padding: 16,
     marginTop: 20,
     marginHorizontal: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
+    borderLeftColor: "#F44336",
   },
   errorText: {
-    color: '#F44336',
+    color: "#F44336",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   completionContainer: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: "#E8F5E8",
     borderRadius: 16,
     padding: 20,
     marginTop: 20,
     marginHorizontal: 16,
     marginBottom: responsiveSpacing(100),
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#C8E6C9',
+    borderColor: "#C8E6C9",
   },
   completionTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#2E7D32",
+    textAlign: "center",
     marginBottom: 8,
   },
   completionSubtitle: {
     fontSize: 16,
-    color: '#2E7D32',
-    textAlign: 'center',
+    color: "#2E7D32",
+    textAlign: "center",
     marginBottom: 12,
   },
   completionDescription: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
+    color: "#666",
+    textAlign: "center",
+    fontStyle: "italic",
     marginBottom: 20,
   },
   viewResultButton: {
-    backgroundColor: '#2FA6F3',
+    backgroundColor: "#2FA6F3",
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    shadowColor: '#2FA6F3',
+    shadowColor: "#2FA6F3",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
   viewResultButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
