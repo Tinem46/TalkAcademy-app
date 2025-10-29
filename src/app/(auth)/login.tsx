@@ -4,13 +4,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Formik } from "formik";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import Toast from "react-native-root-toast";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -34,7 +34,7 @@ const Login = () => {
     setLoading(true);
     try {
       console.log("🔐 Attempting login with:", { username, password: "***" });
-
+      
       // Gọi API với format đúng theo documentation
       const res = (await loginAPI(username, password)) as any;
       console.log("✅ Login response:", res);
@@ -46,26 +46,19 @@ const Login = () => {
         // Lưu token và thông tin user vào AsyncStorage
         await AsyncStorage.setItem("access_token", res.data.accessToken);
         await AsyncStorage.setItem("refreshToken", res.data.refreshToken);
-        await AsyncStorage.setItem(
-          "accountType",
-          res.data.accountType || "TRIAL"
-        );
-        await AsyncStorage.setItem(
-          "trialExpiresAt",
-          res.data.trialExpiresAt || ""
-        );
-
+        await AsyncStorage.setItem("accountType", res.data.accountType || "TRIAL");
+        await AsyncStorage.setItem("trialExpiresAt", res.data.trialExpiresAt || "");
+        
         // Lưu userId từ response (id trong data)
         const userId = res.data?.id || res.data?.user?.id || "1";
         await AsyncStorage.setItem("userId", String(userId));
         await AsyncStorage.setItem("accountId", String(userId)); // Giữ accountId để tương thích
-        console.log("💾 Saved userId:", userId);
+        console.log('💾 Saved userId:', userId);
 
         // Lưu username từ response
-        const savedUsername =
-          res.data?.username || res.data?.user?.username || username;
+        const savedUsername = res.data?.username || res.data?.user?.username || username;
         await AsyncStorage.setItem("username", savedUsername);
-        console.log("💾 Saved username:", savedUsername);
+        console.log('💾 Saved username:', savedUsername);
 
         // Cập nhật app state
         setAppState?.({
@@ -77,7 +70,7 @@ const Login = () => {
 
         // Chuyển về trang chính (index.tsx sẽ kiểm tra onboarding status)
         router.replace("/");
-
+        
         Toast.show("Đăng nhập thành công!", { position: Toast.positions.TOP });
       } else {
         console.log("❌ Login failed:", res);
@@ -90,7 +83,7 @@ const Login = () => {
       console.error("💥 Error response:", error?.response?.data);
       console.error("💥 Error status:", error?.response?.status);
       console.error("💥 Full error:", JSON.stringify(error, null, 2));
-
+      
       const msg =
         error?.response?.data?.message ||
         error?.message ||
@@ -105,9 +98,9 @@ const Login = () => {
     <SafeAreaView style={styles.safe}>
       <Formik
         validationSchema={LoginSchema}
-        initialValues={{
-          username: (params.username as string) || "",
-          password: "",
+        initialValues={{ 
+          username: (params.username as string) || "", 
+          password: "" 
         }}
         onSubmit={(values) => handleLogin(values.username, values.password)}
       >
@@ -240,14 +233,6 @@ const Login = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Forgot Password Link */}
-              <TouchableOpacity
-                style={styles.forgotPasswordContainer}
-                onPress={() => router.push("/(auth)/forgot-password")}
-              >
-                <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-              </TouchableOpacity>
-
               <View style={{ marginTop: 10, paddingHorizontal: 14 }}>
                 <TextBetweenLine color="#7A7A7A" paddingHorizontal={50} />
               </View>
@@ -357,16 +342,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  forgotPasswordContainer: {
-    alignItems: "center",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: "#2FA6F3",
-    fontWeight: "500",
-  },
   createLink: {
     textAlign: "center",
     fontSize: 16,

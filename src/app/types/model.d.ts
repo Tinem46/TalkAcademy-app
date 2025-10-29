@@ -23,22 +23,5 @@ declare global {
         audioUrl: string | null;
         createdAt: string;
     }
-
-    interface VoiceStatsByPassage {
-        passageTitle: string;
-        avgScore: number;
-        avgCer: number;
-        avgSpm: string;
-        avgPause: number;
-    }
-
-    interface UserOverviewData {
-        completedPassages: number;
-        voiceStatsByPassage: VoiceStatsByPassage[];
-        latestvoiceLevel: string;
-    }
 }
-
-// Default export to avoid route warning
-export default {};
 

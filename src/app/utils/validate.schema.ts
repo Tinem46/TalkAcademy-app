@@ -62,6 +62,3 @@ export const UpdateUserSchema = Yup.object().shape({
     .oneOf(["male", "female", "other"], "Giới tính không hợp lệ!")
     .required('Vui lòng chọn giới tính!'),
 });
-
-// Default export to avoid route warning
-export default {};

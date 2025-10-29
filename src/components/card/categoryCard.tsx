@@ -16,8 +16,7 @@ interface CategoryCardProps {
     avatar: string | null;
   }[];
     isFinished: boolean;
-    isUnlocked?: boolean;  // Optional để hỗ trợ API
-    isLock?: boolean;      // Optional để hỗ trợ API với field khác
+    isUnlocked: boolean;
   };
   onPress?: () => void;
   style?: ViewStyle;
@@ -28,9 +27,6 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(20)).current;
 
-  // Kiểm tra cả isUnlocked và isLock (API có thể dùng field khác)
-  const isUnlocked = category.isUnlocked !== undefined ? category.isUnlocked : !category.isLock;
-
   useEffect(() => {
     // Entrance animation
     Animated.parallel([
@@ -40,7 +36,7 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
   }, [opacityAnim, translateYAnim]);
 
   const handlePressIn = () => {
-    if (!isUnlocked) return;
+    if (!category.isUnlocked) return;
     AnimationUtils.spring(scaleAnim, 0.95, {
       tension: 300,
       friction: 10,
@@ -48,7 +44,7 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
   };
 
   const handlePressOut = () => {
-    if (!isUnlocked) return;
+    if (!category.isUnlocked) return;
     AnimationUtils.spring(scaleAnim, 1, {
       tension: 300,
       friction: 10,
@@ -56,12 +52,10 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
   };
 
   const handlePress = () => {
-    if (onPress) {
-      onPress();
-    } else if (isUnlocked) {
+  
       // Navigate to reading screen
       router.push(`/reading?categoryId=${category.id}&categoryName=${encodeURIComponent(category.name)}`);
-    }
+    
   };
 
   return (
@@ -80,10 +74,10 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        disabled={!isUnlocked}
+        disabled={!category.isUnlocked}
         style={({ pressed }) => [
           styles.card,
-          !isUnlocked && styles.lockedCard,
+          !category.isUnlocked && styles.lockedCard,
           style,
         ]}
       >
@@ -97,9 +91,9 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
         <View style={styles.iconWrap}>
           <View style={styles.iconInner}>
             <Ionicons 
-              name={!isUnlocked ? "lock-closed" : "image-outline"} 
+              name={!category.isUnlocked ? "lock-closed" : "image-outline"} 
               size={18} 
-              color={!isUnlocked ? "#9CA3AF" : ENHANCED_COLORS.secondary[600]} 
+              color={!category.isUnlocked ? "#9CA3AF" : ENHANCED_COLORS.secondary[600]} 
             />
           </View>
         </View>
@@ -108,31 +102,31 @@ const CategoryCard = ({ category, onPress, style }: CategoryCardProps) => {
         <View style={styles.content}>
           <Text style={[
             styles.title,
-            !isUnlocked && styles.lockedTitle
+            !category.isUnlocked && styles.lockedTitle
           ]}>
             {category.name}
           </Text>
           <Text style={[
             styles.desc,
-            !isUnlocked && styles.lockedDesc
+            !category.isUnlocked && styles.lockedDesc
           ]} numberOfLines={2}>
             {category.description}
           </Text>
 
           <View style={[
             styles.readMore,
-            !isUnlocked && styles.lockedReadMore
+            !category.isUnlocked && styles.lockedReadMore
           ]}>
             <Text style={[
               styles.readMoreText,
-              !isUnlocked && styles.lockedReadMoreText
+              !category.isUnlocked && styles.lockedReadMoreText
             ]}>
-              {!isUnlocked ? "Locked" : "Read more"}
+              {!category.isUnlocked ? "Locked" : "Read more"}
             </Text>
             <Ionicons 
-              name={!isUnlocked ? "lock-closed" : "arrow-forward"} 
+              name={!category.isUnlocked ? "lock-closed" : "arrow-forward"} 
               size={16} 
-              color={!isUnlocked ? "#9CA3AF" : ENHANCED_COLORS.secondary[500]} 
+              color={!category.isUnlocked ? "#9CA3AF" : ENHANCED_COLORS.secondary[500]} 
             />
           </View>
         </View>
