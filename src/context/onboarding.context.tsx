@@ -1,5 +1,5 @@
-import { SurveyData } from '@/utils/onboarding';
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import { SurveyData } from "@/utils/onboarding";
+import React, { createContext, ReactNode, useContext, useState } from "react";
 
 interface OnboardingContextType {
   surveyData: Partial<SurveyData>;
@@ -7,12 +7,14 @@ interface OnboardingContextType {
   clearSurveyData: () => void;
 }
 
-const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
+const OnboardingContext = createContext<OnboardingContextType | undefined>(
+  undefined
+);
 
 export const useOnboarding = () => {
   const context = useContext(OnboardingContext);
   if (!context) {
-    throw new Error('useOnboarding must be used within an OnboardingProvider');
+    throw new Error("useOnboarding must be used within an OnboardingProvider");
   }
   return context;
 };
@@ -21,11 +23,13 @@ interface OnboardingProviderProps {
   children: ReactNode;
 }
 
-export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children }) => {
+export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
+  children,
+}) => {
   const [surveyData, setSurveyData] = useState<Partial<SurveyData>>({});
 
   const updateSurveyData = (data: Partial<SurveyData>) => {
-    setSurveyData(prev => ({ ...prev, ...data }));
+    setSurveyData((prev) => ({ ...prev, ...data }));
   };
 
   const clearSurveyData = () => {
@@ -33,11 +37,13 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   };
 
   return (
-    <OnboardingContext.Provider value={{
-      surveyData,
-      updateSurveyData,
-      clearSurveyData
-    }}>
+    <OnboardingContext.Provider
+      value={{
+        surveyData,
+        updateSurveyData,
+        clearSurveyData,
+      }}
+    >
       {children}
     </OnboardingContext.Provider>
   );

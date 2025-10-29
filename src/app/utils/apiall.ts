@@ -36,7 +36,13 @@ export const resendConfirmationAPI = (email: string) => {
   return api.post<IBackendRes<any>>("Auth/resend-confirmation", { email });
 };
 
-
+// Verify OTP API
+export const verifyOtpAPI = (email: string, otp: string) => {
+  console.log('🌐 API Call - POST /auth/verify-otp');
+  console.log('🌐 Request data:', { email, otp: "***" });
+  
+  return api.post<IBackendRes<any>>("auth/verify-otp", { email, otp });
+};
 
 export const loginAPI = (username: string, password: string) => {
   console.log("🌐 API Call - URL:", "auth/login");
@@ -57,6 +63,26 @@ export const getUserInfoAPI = () => {
 export const getUserProfileAPI = () => {
   return api.get<IBackendRes<any>>("users/profile");
 }
+
+// Forgot Password API
+export const forgotPasswordAPI = (email: string) => {
+  console.log('🌐 API Call - POST /auth/forgot-password');
+  console.log('🌐 Request data:', { email });
+
+  return api.post<IBackendRes<any>>("auth/forgot-password", { email });
+};
+
+// Reset Password API
+export const resetPasswordAPI = (email: string, otp: string, newPassword: string) => {
+  console.log('🌐 API Call - POST /auth/reset-password');
+  console.log('🌐 Request data:', { email, otp: "***", newPassword: "***" });
+
+  return api.post<IBackendRes<any>>("auth/reset-password", {
+    email,
+    otp,
+    newPassword
+  });
+};
 
 // User Survey APIs
 export const createUserSurveyAPI = (surveyData: {
@@ -524,6 +550,44 @@ export const currencyFormatter = (value: any) => {
 export const getAllPackagesAPI = () => {
   console.log('🌐 API Call - GET /packages');
   return api.get<IBackendRes<any>>("packages");
+};
+
+// Create user-package link
+export const createUserPackageAPI = (payload: {
+  userId: number;
+  packageId: number;
+  endDate: string; 
+  status: 'ACTIVE' | 'INACTIVE' | string;
+}) => {
+  console.log('🌐 API Call - POST /user-packages');
+  console.log('🌐 Request data:', payload);
+  return api.post<IBackendRes<any>>('user-packages', payload);
+};
+
+// PayOS checkout
+export const createPayOSCheckoutAPI = (payload: {
+  amount: number; 
+  packageId: number; 
+  userId: number;
+}) => {
+  console.log('🌐 API Call - POST /checkout/payos');
+  console.log('🌐 Request data:', payload);
+  return api.post<IBackendRes<any>>('checkout/payos', payload);
+};
+
+// Assessments API
+export const getAssessmentsAPI = (level?: string) => {
+  console.log('🌐 API Call - GET /assessments');
+  console.log('🌐 Request params:', { level });
+
+  const params = level ? { level } : {};
+  return api.get<IBackendRes<any>>("assessments", { params });
+};
+
+// User Overview Statistics API
+export const getUserOverviewAPI = () => {
+  console.log('🌐 API Call - GET /overview/user');
+  return api.get<IBackendRes<any>>("overview/user");
 };
 
 // mockApi.ts

@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Talk-Academy",
+    "name": "Talkademy",
     "slug": "Talk-Academy",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./src/assets/Mascot/Asset1logoFB.png",
+    "icon": "./src/assets/Mascot/icon.png",
     "scheme": "talkacademy",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/Mascot/Asset1logoFB.png",
+       "foregroundImage": "./src/assets/Mascot/androidIcon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -47,9 +47,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "171d7391-524a-43b4-828c-de18ce7caafa"
+        "projectId": "0b98e6d7-3aba-4d06-ab42-9afcfdee2672"
       }
     },
-    "owner": "tinem"
+    "owner": "khangho46"
   }
 }
