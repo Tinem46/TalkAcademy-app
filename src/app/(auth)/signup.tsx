@@ -4,14 +4,14 @@ import { router } from "expo-router";
 import { Formik } from "formik";
 import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Toast from "react-native-root-toast";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,19 +19,18 @@ import * as Yup from "yup";
 
 import SocialButton from "@/components/button/social.button";
 import TextBetweenLine from "@/components/text/textline";
-import { registerApi, verifyOtpAPI } from "../utils/apiall";
+import { registerApi } from "../utils/apiall";
 
 // ===== Validation theo API mới =====
 const SignUpSchema = Yup.object({
   username: Yup.string()
     .min(3, "Tên đăng nhập tối thiểu 3 ký tự")
     .max(20, "Tên đăng nhập tối đa 20 ký tự")
-    .matches(
-      /^[a-zA-Z0-9_]+$/,
-      "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới"
-    )
+    .matches(/^[a-zA-Z0-9_]+$/, "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới")
     .required("Tên đăng nhập là bắt buộc"),
-  email: Yup.string().email("Email không hợp lệ").required("Email là bắt buộc"),
+  email: Yup.string()
+    .email("Email không hợp lệ")
+    .required("Email là bắt buộc"),
   password: Yup.string()
     .min(6, "Mật khẩu tối thiểu 6 ký tự")
     .required("Mật khẩu là bắt buộc"),
@@ -44,134 +43,61 @@ const SignUpPage = () => {
   const [loading, setLoading] = useState(false);
   const [seePass, setSeePass] = useState(false);
   const [seeRepass, setSeeRepass] = useState(false);
-  const [showOtpScreen, setShowOtpScreen] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length !== 6) {
-      Toast.show("Vui lòng nhập mã OTP gồm 6 số", {
-        position: Toast.positions.TOP,
-      });
-      return;
-    }
-
-    try {
-      setVerifyingOtp(true);
-      const res = (await verifyOtpAPI(registeredEmail, otp)) as any;
-      console.log("Verify OTP response:", res);
-
-      const isSuccess = res?.statusCode === 201 || res?.statusCode === 200;
-
-      if (isSuccess) {
-        Toast.show("Xác thực thành công!", {
-          position: Toast.positions.TOP,
-        });
-
-        // Lưu token vào AsyncStorage nếu có
-        if (res?.data?.accessToken) {
-          await AsyncStorage.setItem("access_token", res.data.accessToken);
-          await AsyncStorage.setItem(
-            "refreshToken",
-            res.data.refreshToken || ""
-          );
-          await AsyncStorage.setItem(
-            "accountType",
-            res.data?.accountType || "TRIAL"
-          );
-          await AsyncStorage.setItem(
-            "trialExpiresAt",
-            res.data?.trialExpiresAt || ""
-          );
-
-          // Lưu userId từ response
-          const userId = res.data?.id || res.data?.user?.id || "1";
-          await AsyncStorage.setItem("userId", String(userId));
-          await AsyncStorage.setItem("accountId", String(userId)); // Giữ accountId để tương thích
-          console.log("💾 Saved userId from verify:", userId);
-
-          // Lưu username từ response
-          const savedUsername =
-            res.data?.username || res.data?.user?.username || registeredEmail;
-          await AsyncStorage.setItem("username", savedUsername);
-          console.log("💾 Saved username from verify:", savedUsername);
-        }
-
-        // Chuyển đến onboarding vì đây là lần đầu đăng ký
-        router.replace("/(onboarding)/intro");
-      } else {
-        Toast.show(res?.message || "Mã OTP không chính xác!", {
-          position: Toast.positions.TOP,
-        });
-      }
-    } catch (err: any) {
-      console.error("Verify OTP error:", err);
-
-      let errorMessage = "Xác thực OTP thất bại!";
-      if (err?.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-
-      Toast.show(errorMessage, { position: Toast.positions.TOP });
-    } finally {
-      setVerifyingOtp(false);
-    }
-  };
-
-  const handleSignUp = async (
-    username: string,
-    email: string,
-    password: string
-  ) => {
+  const handleSignUp = async (username: string, email: string, password: string) => {
     try {
       setLoading(true);
 
-      const res = (await registerApi(
-        username,
-        email,
-        password,
-        "CUSTOMER"
-      )) as any;
-      console.log("Full response:", res);
-      console.log("Response data:", res?.data);
-      console.log("Status code:", res?.statusCode);
-      console.log("Message:", res?.message);
-
+      const res = await registerApi(username, email, password, "CUSTOMER") as any;
+      console.log('Full response:', res);
+      console.log('Response data:', res?.data);
+      console.log('Status code:', res?.statusCode);
+      console.log('Message:', res?.message);
+      
       // Kiểm tra thành công dựa trên statusCode
       const isSuccess = res?.statusCode === 201;
 
-      console.log("Is success:", isSuccess);
+      console.log('Is success:', isSuccess);
 
       if (isSuccess) {
-        Toast.show(
-          "Đăng ký thành công! Vui lòng kiểm tra email để nhận mã OTP.",
-          {
-            position: Toast.positions.TOP,
-            duration: Toast.durations.LONG,
-          }
-        );
+        Toast.show("Đăng ký thành công", {
+          position: Toast.positions.TOP,
+        });
+        
+        // Lưu token vào AsyncStorage nếu có
+        if (res?.accessToken) {
+          await AsyncStorage.setItem('access_token', res.accessToken);
+          await AsyncStorage.setItem('refreshToken', res.refreshToken);
+          await AsyncStorage.setItem('accountType', res.data?.account?.type || "TRIAL");
+          await AsyncStorage.setItem('trialExpiresAt', res.data?.account?.trialExpiresAt || "");
+          
+          // Lưu accountId từ response
+          const accountId = res.data?.account?.id || res.data?.user?.id || "1";
+          await AsyncStorage.setItem('accountId', String(accountId));
+          console.log('💾 Saved accountId from register:', accountId);
 
-        // Lưu email và chuyển sang màn hình nhập OTP
-        setRegisteredEmail(email);
-        setShowOtpScreen(true);
+          // Lưu username từ response
+          const savedUsername = res.data?.username || res.data?.user?.username || username;
+          await AsyncStorage.setItem('username', savedUsername);
+          console.log('💾 Saved username from register:', savedUsername);
+        }
+        
+        // Chuyển đến onboarding vì đây là lần đầu đăng ký
+        router.replace("/(onboarding)/intro");
       } else {
-        console.log("Registration failed:", res);
+        console.log('Registration failed:', res);
         Toast.show(res?.message || "Đăng ký thất bại!", {
           position: Toast.positions.TOP,
         });
       }
     } catch (err: any) {
-      console.error("Registration error:", err);
-
+      console.error('Registration error:', err);
+      
       // Xử lý các loại lỗi khác nhau
       let errorMessage = "Có lỗi xảy ra khi đăng ký!";
-
+      
       if (err?.response?.status === 409) {
-        errorMessage =
-          "Email hoặc tên đăng nhập này đã được sử dụng. Vui lòng chọn thông tin khác.";
+        errorMessage = "Email hoặc tên đăng nhập này đã được sử dụng. Vui lòng chọn thông tin khác.";
       } else if (err?.response?.status === 400) {
         errorMessage = "Thông tin không hợp lệ. Vui lòng kiểm tra lại.";
       } else if (err?.response?.data?.message) {
@@ -179,106 +105,12 @@ const SignUpPage = () => {
       } else if (err?.message) {
         errorMessage = err.message;
       }
-
+      
       Toast.show(errorMessage, { position: Toast.positions.TOP });
     } finally {
       setLoading(false);
     }
   };
-
-  // Render OTP Screen
-  if (showOtpScreen) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.container}>
-              {/* Header */}
-              <View style={styles.headerRow}>
-                <View style={styles.logoWrap}>
-                  <Ionicons name="mail-outline" size={30} color="#1D7BF2" />
-                </View>
-                <Text style={styles.brand}>TALKADEMY</Text>
-              </View>
-
-              {/* Welcome text */}
-              <View style={styles.welcomeContainer}>
-                <Text style={styles.welcomeTitle}>Xác thực OTP</Text>
-                <Text style={styles.welcomeSubtitle}>
-                  Vui lòng nhập mã OTP đã được gửi đến email: {registeredEmail}
-                </Text>
-              </View>
-
-              {/* OTP Input */}
-              <View style={styles.form}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Mã OTP</Text>
-                  <View style={styles.inputBox}>
-                    <Ionicons
-                      name="key-outline"
-                      size={20}
-                      color="#A6A6A6"
-                      style={styles.inputIcon}
-                    />
-                    <TextInput
-                      placeholder="Nhập mã OTP 6 số"
-                      placeholderTextColor="#A6A6A6"
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      value={otp}
-                      onChangeText={setOtp}
-                      style={styles.input}
-                    />
-                  </View>
-                </View>
-
-                {/* Verify button */}
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={handleVerifyOtp}
-                  disabled={verifyingOtp}
-                  style={[styles.primaryBtn, verifyingOtp && { opacity: 0.7 }]}
-                >
-                  {verifyingOtp ? (
-                    <View style={styles.loadingContainer}>
-                      <Ionicons
-                        name="hourglass-outline"
-                        size={20}
-                        color="#43B7FA"
-                      />
-                      <Text style={styles.primaryText}>Đang xác thực...</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.buttonContainer}>
-                      <Ionicons
-                        name="checkmark-circle-outline"
-                        size={20}
-                        color="#43B7FA"
-                      />
-                      <Text style={styles.primaryText}>Xác thực</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-
-                {/* Back to signup */}
-                <View style={styles.loginLinkContainer}>
-                  <TouchableOpacity onPress={() => setShowOtpScreen(false)}>
-                    <Text style={styles.loginLink}>← Quay lại đăng ký</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -321,15 +153,11 @@ const SignUpPage = () => {
                 {/* Welcome text */}
                 <View style={styles.welcomeContainer}>
                   <Text style={styles.welcomeTitle}>Tạo tài khoản mới</Text>
-                  <Text style={styles.welcomeSubtitle}>
-                    Đăng ký để bắt đầu hành trình học tập của bạn
-                  </Text>
+                  <Text style={styles.welcomeSubtitle}>Đăng ký để bắt đầu hành trình học tập của bạn</Text>
                 </View>
 
                 {/* Google button */}
-                <SocialButton
-                  containerStyle={{ paddingHorizontal: 12, marginBottom: 30 }}
-                />
+                <SocialButton containerStyle={{ paddingHorizontal: 12, marginBottom: 30 }} />
 
                 {/* Divider */}
                 <View style={{ marginTop: 10 }}>
@@ -342,10 +170,10 @@ const SignUpPage = () => {
                   <View style={styles.field}>
                     <Text style={styles.label}>Tên đăng nhập</Text>
                     <View style={styles.inputBox}>
-                      <Ionicons
-                        name="person-outline"
-                        size={20}
-                        color="#A6A6A6"
+                      <Ionicons 
+                        name="person-outline" 
+                        size={20} 
+                        color="#A6A6A6" 
                         style={styles.inputIcon}
                       />
                       <TextInput
@@ -368,10 +196,10 @@ const SignUpPage = () => {
                   <View style={styles.field}>
                     <Text style={styles.label}>Email</Text>
                     <View style={styles.inputBox}>
-                      <Ionicons
-                        name="mail-outline"
-                        size={20}
-                        color="#A6A6A6"
+                      <Ionicons 
+                        name="mail-outline" 
+                        size={20} 
+                        color="#A6A6A6" 
                         style={styles.inputIcon}
                       />
                       <TextInput
@@ -391,14 +219,15 @@ const SignUpPage = () => {
                     )}
                   </View>
 
+
                   {/* Password */}
                   <View style={styles.field}>
                     <Text style={styles.label}>Mật Khẩu</Text>
                     <View style={[styles.inputBox, { position: "relative" }]}>
-                      <Ionicons
-                        name="lock-closed-outline"
-                        size={20}
-                        color="#A6A6A6"
+                      <Ionicons 
+                        name="lock-closed-outline" 
+                        size={20} 
+                        color="#A6A6A6" 
                         style={styles.inputIcon}
                       />
                       <TextInput
@@ -417,10 +246,10 @@ const SignUpPage = () => {
                         style={styles.seeBtn}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <Ionicons
-                          name={seePass ? "eye-off-outline" : "eye-outline"}
-                          size={20}
-                          color="#153F57"
+                        <Ionicons 
+                          name={seePass ? "eye-off-outline" : "eye-outline"} 
+                          size={20} 
+                          color="#153F57" 
                         />
                       </TouchableOpacity>
                     </View>
@@ -433,10 +262,10 @@ const SignUpPage = () => {
                   <View style={styles.field}>
                     <Text style={styles.label}>Nhập lại mật khẩu</Text>
                     <View style={[styles.inputBox, { position: "relative" }]}>
-                      <Ionicons
-                        name="lock-closed-outline"
-                        size={20}
-                        color="#A6A6A6"
+                      <Ionicons 
+                        name="lock-closed-outline" 
+                        size={20} 
+                        color="#A6A6A6" 
                         style={styles.inputIcon}
                       />
                       <TextInput
@@ -455,10 +284,10 @@ const SignUpPage = () => {
                         style={styles.seeBtn}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <Ionicons
-                          name={seeRepass ? "eye-off-outline" : "eye-outline"}
-                          size={20}
-                          color="#153F57"
+                        <Ionicons 
+                          name={seeRepass ? "eye-off-outline" : "eye-outline"} 
+                          size={20} 
+                          color="#153F57" 
                         />
                       </TouchableOpacity>
                     </View>
@@ -478,20 +307,12 @@ const SignUpPage = () => {
                   >
                     {loading ? (
                       <View style={styles.loadingContainer}>
-                        <Ionicons
-                          name="hourglass-outline"
-                          size={20}
-                          color="#43B7FA"
-                        />
+                        <Ionicons name="hourglass-outline" size={20} color="#43B7FA" />
                         <Text style={styles.primaryText}>Đang tạo...</Text>
                       </View>
                     ) : (
                       <View style={styles.buttonContainer}>
-                        <Ionicons
-                          name="person-add-outline"
-                          size={20}
-                          color="#43B7FA"
-                        />
+                        <Ionicons name="person-add-outline" size={20} color="#43B7FA" />
                         <Text style={styles.primaryText}>Tạo Tài khoản</Text>
                       </View>
                     )}
@@ -500,9 +321,7 @@ const SignUpPage = () => {
                   {/* Login link */}
                   <View style={styles.loginLinkContainer}>
                     <Text style={styles.loginText}>Đã có tài khoản? </Text>
-                    <TouchableOpacity
-                      onPress={() => router.push("/(auth)/login")}
-                    >
+                    <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
                       <Text style={styles.loginLink}>Đăng nhập</Text>
                     </TouchableOpacity>
                   </View>
@@ -551,7 +370,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   brand: {
-    fontSize: 32,
+    fontSize:32,
     letterSpacing: 1,
     color: "#111",
     fontFamily: Platform.OS === "ios" ? "Times New Roman" : "serif",
@@ -618,7 +437,7 @@ const styles = StyleSheet.create({
 
   primaryBtn: {
     alignSelf: "center",
-
+   
     height: 44,
     paddingHorizontal: 40,
     borderRadius: 12,
@@ -633,7 +452,7 @@ const styles = StyleSheet.create({
     marginTop: 80,
   },
   primaryText: { color: "#43B7FA", fontSize: 16, fontWeight: "800" },
-
+  
   // Button containers
   buttonContainer: {
     flexDirection: "row",

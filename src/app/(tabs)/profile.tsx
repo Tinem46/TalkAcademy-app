@@ -1,20 +1,11 @@
 import { getUserProfileAPI } from "@/app/utils/apiall";
 import SafeAreaTabWrapper from "@/components/layout/SafeAreaTabWrapper";
-import CustomScrollView from "@/components/refresh/CustomScrollView";
 import { useCurrentApp } from "@/context/app.context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-root-toast";
 
 // Interface cho User Profile
@@ -30,164 +21,8 @@ interface UserProfile {
   voiceTests: any[];
   practices: any[];
   userPackages: any[];
-  completedAssessments: any[];
-  level: string;
-  account?: {
-    type: string;
-  };
 }
 
-// Helper functions để lấy màu và label cho type
-const getTypeLabel = (type?: string) => {
-  switch (type?.toUpperCase()) {
-    case "GUEST":
-      return "Guest";
-    case "VIP":
-      return "VIP";
-    case "TRIAL":
-      return "Trial";
-    default:
-      return "Free";
-  }
-};
-
-const getTypeBadgeStyle = (type?: string) => {
-  switch (type?.toUpperCase()) {
-    case "GUEST":
-      return { backgroundColor: "#FEF3C7", borderColor: "#FCD34D" };
-    case "VIP":
-      return { backgroundColor: "#EDE9FE", borderColor: "#C4B5FD" };
-    case "TRIAL":
-      return { backgroundColor: "#D1FAE5", borderColor: "#6EE7B7" };
-    default:
-      return { backgroundColor: "#F3F4F6", borderColor: "#D1D5DB" };
-  }
-};
-
-// Helper function để lấy màu sao theo type
-const getStarColors = (type?: string) => {
-  switch (type?.toUpperCase()) {
-    case "GUEST":
-      return ["#FCD34D", "#F59E0B", "#D97706"]; // Amber gradient
-    case "VIP":
-      return ["#C4B5FD", "#A78BFA", "#8B5CF6"]; // Purple gradient
-    case "TRIAL":
-      return ["#6EE7B7", "#34D399", "#10B981"]; // Green gradient
-    default:
-      return ["#D1D5DB", "#9CA3AF", "#6B7280"]; // Gray gradient
-  }
-};
-
-// Component hiệu ứng lấp lánh cho Type Badge
-const ShimmerTypeBadge = ({ type }: { type?: string }) => {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Chỉ chạy hiệu ứng cho VIP và GUEST
-    if (type?.toUpperCase() === "VIP" || type?.toUpperCase() === "GUEST") {
-      // Animation lấp lánh
-      const shimmer = Animated.loop(
-        Animated.sequence([
-          Animated.timing(shimmerAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shimmerAnim, {
-            toValue: 0,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-
-      // Animation xoay nhẹ
-      const rotate = Animated.loop(
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        })
-      );
-
-      shimmer.start();
-      rotate.start();
-
-      return () => {
-        shimmer.stop();
-        rotate.stop();
-      };
-    }
-  }, [type, shimmerAnim, rotateAnim]);
-
-  const starOpacity = shimmerAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.6, 1, 0.6],
-  });
-
-  const rotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
-
-  const colors = getStarColors(type);
-
-  return (
-    <View style={[styles.typeBadge, getTypeBadgeStyle(type)]}>
-      {/* Container cho ngôi sao với hiệu ứng */}
-      <Animated.View
-        style={{
-          opacity: starOpacity,
-          transform: [{ rotate: rotation }],
-          position: "relative",
-          width: 18,
-          height: 18,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        {/* Ngôi sao chính - lớn */}
-        <Ionicons
-          name="star"
-          size={16}
-          color={colors[1]}
-          style={{ position: "absolute" }}
-        />
-
-        {/* Ngôi sao highlight - nhỏ hơn, sáng hơn ở trên */}
-        <Ionicons
-          name="star"
-          size={10}
-          color={colors[0]}
-          style={{
-            position: "absolute",
-            top: 2,
-            left: 4,
-          }}
-        />
-
-        {/* Ánh sáng tỏa ra */}
-        {(type?.toUpperCase() === "VIP" || type?.toUpperCase() === "GUEST") && (
-          <>
-            <View
-              style={{
-                position: "absolute",
-                width: 20,
-                height: 20,
-                backgroundColor: colors[0],
-                opacity: 0.2,
-                borderRadius: 10,
-              }}
-            />
-          </>
-        )}
-      </Animated.View>
-
-      <Text style={styles.typeBadgeText}>{getTypeLabel(type)}</Text>
-    </View>
-  );
-};
 
 const Card = ({
   title,
@@ -200,7 +35,11 @@ const Card = ({
   icon: React.ReactNode;
   onPress?: () => void;
 }) => (
-  <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+  <TouchableOpacity 
+    style={styles.card} 
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
     <View style={styles.iconWrap}>{icon}</View>
     <View style={styles.cardContent}>
       <Text style={styles.cardTitle}>{title}</Text>
@@ -209,13 +48,7 @@ const Card = ({
   </TouchableOpacity>
 );
 
-const ProfileSection = ({
-  userProfile,
-  loading,
-}: {
-  userProfile: UserProfile | null;
-  loading: boolean;
-}) => {
+const ProfileSection = ({ userProfile, loading }: { userProfile: UserProfile | null; loading: boolean }) => {
   if (loading) {
     return (
       <View style={styles.section}>
@@ -231,49 +64,29 @@ const ProfileSection = ({
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
-
+      
       <View style={styles.profileCard}>
         <View style={styles.avatarContainer}>
-          <Ionicons name="person-circle" size={70} color="#2FA6F3" />
+          <Ionicons name="person-circle" size={60} color="#2FA6F3" />
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>
-            {userProfile?.username || "Chưa cập nhật"}
-          </Text>
-          <Text style={styles.profileEmail}>
-            {userProfile?.email || "Chưa cập nhật"}
-          </Text>
-
-          <View style={styles.badgesRow}>
-            <View style={styles.levelBadge}>
-              <Ionicons name="ribbon-outline" size={14} color="#6366F1" />
-              <Text style={styles.levelBadgeText}>
-                {userProfile?.level || "0"}
-              </Text>
-            </View>
-
-          <ShimmerTypeBadge type={userProfile?.account?.type} />
-          </View>
+          <Text style={styles.profileName}>{userProfile?.username || 'Chưa cập nhật'}</Text>
+          <Text style={styles.profileEmail}>{userProfile?.email || 'Chưa cập nhật'}</Text>
+          <Text style={styles.profileLevel}>{userProfile?.role || 'CUSTOMER'}</Text>
         </View>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
-            {userProfile?.completedAssessments?.length || 0}
-          </Text>
+          <Text style={styles.statNumber}>{userProfile?.voiceTests?.length || 0}</Text>
           <Text style={styles.statLabel}>Bài kiểm tra</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
-            {userProfile?.voiceTests?.length || 0}
-          </Text>
+          <Text style={styles.statNumber}>{userProfile?.practices?.length || 0}</Text>
           <Text style={styles.statLabel}>Bài luyện tập</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
-            {userProfile?.userPackages?.length || 0}
-          </Text>
+          <Text style={styles.statNumber}>{userProfile?.userPackages?.length || 0}</Text>
           <Text style={styles.statLabel}>Gói đã mua</Text>
         </View>
       </View>
@@ -281,12 +94,9 @@ const ProfileSection = ({
   );
 };
 
-const AnalysisSection = ({
-  userProfile,
-}: {
-  userProfile: UserProfile | null;
-}) => {
+const AnalysisSection = ({ userProfile }: { userProfile: UserProfile | null }) => {
   const totalTests = userProfile?.voiceTests?.length || 0;
+  const totalPractices = userProfile?.practices?.length || 0;
   const totalPackages = userProfile?.userPackages?.length || 0;
 
   return (
@@ -295,45 +105,30 @@ const AnalysisSection = ({
 
       <Card
         title="Bài kiểm tra"
-        desc={`Làm bài kiểm tra phát âm để cải thiện kỹ năng phát âm của bạn.`}
-        icon={<Ionicons name="clipboard-outline" size={40} color="#2FA6F3" />}
-        onPress={() => router.push("/(exercise)/categories?tab=assessment")}
+        desc={`Bạn đã hoàn thành ${totalTests} bài kiểm tra phát âm. ${totalTests > 0 ? 'Tiếp tục duy trì để cải thiện kỹ năng!' : 'Hãy bắt đầu với bài kiểm tra đầu tiên.'}`}
+        icon={
+          <MaterialCommunityIcons name="chart-bar" size={40} color="#2FA6F3" />
+        }
+        onPress={() => router.push('/(onboarding)/voiceCheck')}
       />
-      <Card
+      <Card 
         title="Bài luyện tập"
-        desc={`Đã luyện tập ${totalTests} bài. ${
-          totalTests > 0
-            ? "Luyện tập thường xuyên sẽ giúp phát âm chuẩn hơn!"
-            : "Bắt đầu luyện tập để cải thiện phát âm."
-        }`}
+        desc={`Đã luyện tập ${totalTests} bài. ${totalTests > 0 ? 'Luyện tập thường xuyên sẽ giúp phát âm chuẩn hơn!' : 'Bắt đầu luyện tập để cải thiện phát âm.'}`}
         icon={<Ionicons name="book" size={40} color="#2FA6F3" />}
-        onPress={() => router.push("/(exercise)/categories")}
+        onPress={() => router.push('/(exercise)/categories')}
       />
       <Card
         title="Gói học"
-        desc={`Đã sở hữu ${totalPackages} gói học. ${
-          totalPackages > 0
-            ? "Tận dụng tối đa các gói học để nâng cao trình độ!"
-            : "Khám phá các gói học phù hợp với bạn."
-        }`}
+        desc={`Đã sở hữu ${totalPackages} gói học. ${totalPackages > 0 ? 'Tận dụng tối đa các gói học để nâng cao trình độ!' : 'Khám phá các gói học phù hợp với bạn.'}`}
         icon={
-          <MaterialCommunityIcons
-            name="package-variant"
-            size={40}
-            color="#2FA6F3"
-          />
+          <MaterialCommunityIcons name="package-variant" size={40} color="#2FA6F3" />
         }
-        onPress={() => router.push("/(tabs)/package")}
-      />
-      <Card
-        title="Thống kê người dùng"
-        desc="Xem thống kê chi tiết về hiệu suất học tập và tiến độ của bạn"
-        icon={<Ionicons name="stats-chart" size={40} color="#2FA6F3" />}
-        onPress={() => router.push("/(auth)/user-statistics")}
+        onPress={() => router.push('/(tabs)/package')}
       />
     </View>
   );
 };
+
 
 // const DebugSection = ({ userProfile }: { userProfile: UserProfile | null }) => {
 //   const [showDebug, setShowDebug] = useState(false);
@@ -342,7 +137,7 @@ const AnalysisSection = ({
 
 //   return (
 //     <View style={styles.section}>
-//       <TouchableOpacity
+//       <TouchableOpacity 
 //         style={styles.debugToggle}
 //         onPress={() => setShowDebug(!showDebug)}
 //       >
@@ -350,7 +145,7 @@ const AnalysisSection = ({
 //           {showDebug ? 'Ẩn' : 'Hiện'} Debug Info
 //         </Text>
 //       </TouchableOpacity>
-
+      
 //       {showDebug && (
 //         <View style={styles.debugContainer}>
 //           <Text style={styles.debugTitle}>Debug Information:</Text>
@@ -372,11 +167,11 @@ export default function ProfileScreen() {
   const fetchUserProfile = useCallback(async () => {
     try {
       setLoading(true);
-
+      
       // Kiểm tra token trước khi gọi API
       const token = await AsyncStorage.getItem("access_token");
-      console.log("🔑 Token exists:", !!token);
-
+      console.log('🔑 Token exists:', !!token);
+      
       if (!token) {
         Toast.show("Vui lòng đăng nhập lại!", {
           position: Toast.positions.TOP,
@@ -386,29 +181,29 @@ export default function ProfileScreen() {
       }
 
       const response = await getUserProfileAPI();
-      console.log("📊 Profile API Response:", response);
-
+      console.log('📊 Profile API Response:', response);
+      
       // Vì axios interceptor đã trả về response.data, nên response chính là data
       if (response) {
         const profileData = response as unknown as UserProfile;
         setUserProfile(profileData);
-        console.log("✅ Profile loaded successfully:", profileData);
-        console.log("👤 User:", profileData.username);
-        console.log("📧 Email:", profileData.email);
-        console.log("🎯 Role:", profileData.role);
-        console.log("📊 Voice Tests:", profileData.voiceTests.length);
-        console.log("📚 Practices:", profileData.practices.length);
-        console.log("📦 Packages:", profileData.userPackages.length);
+        console.log('✅ Profile loaded successfully:', profileData);
+        console.log('👤 User:', profileData.username);
+        console.log('📧 Email:', profileData.email);
+        console.log('🎯 Role:', profileData.role);
+        console.log('📊 Voice Tests:', profileData.voiceTests.length);
+        console.log('📚 Practices:', profileData.practices.length);
+        console.log('📦 Packages:', profileData.userPackages.length);
       } else {
-        console.log("⚠️ No data in response");
+        console.log('⚠️ No data in response');
         Toast.show("Không có dữ liệu profile!", {
           position: Toast.positions.TOP,
         });
       }
     } catch (error: any) {
-      // console.error('💥 Error fetching profile:', error);
-      // console.error('💥 Error details:', error?.response?.data);
-
+      console.error('💥 Error fetching profile:', error);
+      console.error('💥 Error details:', error?.response?.data);
+      
       // Xử lý lỗi cụ thể
       if (error?.response?.status === 401) {
         Toast.show("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!", {
@@ -419,6 +214,10 @@ export default function ProfileScreen() {
         router.replace("/(auth)/welcome");
       } else if (error?.response?.status === 403) {
         Toast.show("Bạn không có quyền truy cập thông tin này!", {
+          position: Toast.positions.TOP,
+        });
+      } else {
+        Toast.show("Không thể tải thông tin profile. Vui lòng thử lại!", {
           position: Toast.positions.TOP,
         });
       }
@@ -436,81 +235,90 @@ export default function ProfileScreen() {
     try {
       await fetchUserProfile();
     } catch (error) {
-      console.error("Error refreshing profile:", error);
+      console.error('Error refreshing profile:', error);
     } finally {
       setRefreshing(false);
     }
   }, [fetchUserProfile]);
 
   const handleLogout = () => {
-    Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
-      {
-        text: "Hủy",
-        style: "cancel",
-      },
-      {
-        text: "Đăng xuất",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // Clear AsyncStorage
-            await AsyncStorage.multiRemove([
-              "access_token",
-              "refreshToken",
-              "role",
-              "userId",
-              "userEmail",
-              "userName",
-              "userPicture",
-              "accountType",
-              "trialExpiresAt",
-            ]);
-
-            // Clear app state
-            setAppState?.(null);
-
-            // Show success message
-            Toast.show("Đăng xuất thành công!", {
-              position: Toast.positions.TOP,
-            });
-
-            // Navigate to welcome screen
-            router.replace("/(auth)/welcome");
-          } catch (error) {
-            console.error("Logout error:", error);
-            Toast.show("Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại!", {
-              position: Toast.positions.TOP,
-            });
-          }
+    Alert.alert(
+      "Đăng xuất",
+      "Bạn có chắc chắn muốn đăng xuất?",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
         },
-      },
-    ]);
+        {
+          text: "Đăng xuất",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear AsyncStorage
+              await AsyncStorage.multiRemove([
+                "access_token",
+                "refreshToken",
+                "role",
+                "userId",
+                "userEmail",
+                "userName",
+                "userPicture",
+                "accountType",
+                "trialExpiresAt"
+              ]);
+
+              // Clear app state
+              setAppState?.(null);
+
+              // Show success message
+              Toast.show("Đăng xuất thành công!", {
+                position: Toast.positions.TOP,
+              });
+
+              // Navigate to welcome screen
+              router.replace("/(auth)/welcome");
+            } catch (error) {
+              console.error("Logout error:", error);
+              Toast.show("Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại!", {
+                position: Toast.positions.TOP,
+              });
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
     <SafeAreaTabWrapper style={styles.safe}>
-      <CustomScrollView
+      <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-        refreshMessage="Đang tải thông tin cá nhân..."
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#2FA6F3']} // Android
+            tintColor="#2FA6F3" // iOS
+          />
+        }
       >
         <View style={styles.headerContainer}>
           <Text style={styles.h1}>Profile</Text>
         </View>
-
+        
         <ProfileSection userProfile={userProfile} loading={loading} />
         <AnalysisSection userProfile={userProfile} />
         {/* <DebugSection userProfile={userProfile} /> */}
-
+        
         <View style={styles.logoutSection}>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
             <Text style={styles.logoutText}>Đăng xuất</Text>
           </TouchableOpacity>
         </View>
-      </CustomScrollView>
+      </ScrollView>
     </SafeAreaTabWrapper>
   );
 }
@@ -518,6 +326,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
+   
   },
   scrollContent: {
     padding: 20,
@@ -590,47 +399,7 @@ const styles = StyleSheet.create({
   profileEmail: {
     fontSize: 14,
     color: "#6B7280",
-    marginBottom: 8,
-  },
-  badgesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  levelBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#EEF2FF",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "#C7D2FE",
-  },
-  levelBadgeText: {
-    fontSize: 12,
-    color: "#6366F1",
-    fontWeight: "700",
-  },
-  typeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    gap: 4,
-    borderWidth: 1,
-  },
-  typeBadgeText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: "#1F2937",
-    letterSpacing: 0.5,
-    textShadowColor: "rgba(0, 0, 0, 0.1)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    marginBottom: 4,
   },
   profileLevel: {
     fontSize: 14,
@@ -725,29 +494,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontSize: 14,
   },
-  actionSection: {
-    marginTop: 24,
-    alignItems: "center",
-  },
-  redoOnboardingButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F0F8FF",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#B3D9FF",
-    marginBottom: 16,
-  },
-  redoOnboardingText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2FA6F3",
-    marginLeft: 8,
-  },
   logoutSection: {
-    marginTop: 16,
+    marginTop: 32,
     marginBottom: 20,
   },
   logoutButton: {
